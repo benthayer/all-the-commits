@@ -28,18 +28,19 @@ def gen_hash(parent, salt):
     return sha
 
 first_commit_hash = 'f9a17849fe28dff34647f698a392be2a9ce3617b'
-print(first_commit_hash)
 num_unique = int(sys.argv[1])
 all_commits = set()
 parent_hash = first_commit_hash
 commit_hash = parent_hash
 all_commits.add(parent_hash[:num_unique])
 
-while len(all_commits) != 16**num_unique:
-    salt = 0
-    while commit_hash[:num_unique] in all_commits:
-        salt += 1
-        commit_hash = gen_hash(parent_hash, str(salt))
-    print(commit_hash, salt)
-    all_commits.add(commit_hash[:num_unique])
-    parent_hash = commit_hash
+with open('commits', 'w') as commit_file:
+    commit_file.write(first_commit_hash + '\n')
+    while len(all_commits) != 16**num_unique:
+        salt = 0
+        while commit_hash[:num_unique] in all_commits:
+            salt += 1
+            commit_hash = gen_hash(parent_hash, str(salt))
+        commit_file.write(commit_hash + ' ' + str(salt) + '\n')
+        all_commits.add(commit_hash[:num_unique])
+        parent_hash = commit_hash
