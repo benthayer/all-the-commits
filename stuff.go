@@ -34,8 +34,8 @@ func gen_hash(parent_hash string, salt string) [20]byte {
     prefix := "commit " + strconv.Itoa(len(commit)) + "\x00"
     object := prefix + commit
     data := []byte(object)
-    shasum := sha1.Sum(data)
-    return shasum
+    sha_sum := sha1.Sum(data)
+    return sha_sum
 }
 
 
@@ -45,25 +45,24 @@ func check(e error) {
     }
 }
 
+func sum_to_int (sha_sum [20]byte) {
+    hash := make([]byte, 4)
+    copy(hash, sha_sum[:4])
+    hash[3] = hash[3] - (hash[3] % 16)
+    return binary.BigEndian.Uint32(hash) / 16
+}
 
 func main() {
+    // Track the commits we're making
     f, err := os.Create("./commits")
     check(err)
-
     defer f.Close()
-
     w := bufio.NewWriter(f)
 
     // 1<<28 == 16^7
     const num_total_hashes = 1<<28
-    var commit_generated [num_total_hashes]bool
 
-    parent_hash := "f9a17849fe28dff34647f698a392be2a9ce3617b"
-    hash_decoded, err := hex.DecodeString(parent_hash[:8])
-    check(err)
-    int_hash := binary.BigEndian.Uint32(hash_decoded) / 16
-    commit_generated[int_hash] = true
-
+    // progress tracking
     var expected float64 = 0
     var progress float64 = 0
 
@@ -71,19 +70,32 @@ func main() {
         expected += float64(num_total_hashes)/float64(num_total_hashes-commit_number)
     }
 
-    var shasum [20]byte
+    // variables
+    var commit_generated [num_total_hashes]bool
+    var sha_sum [20]byte
+    var int_hash uint32
+
+    // set up first commit
+    parent_hash := "f9a17849fe28dff34647f698a392be2a9ce3617b"
+    hash_decoded, err := hex.DecodeString(parent_hash[:8])
+    check(err)
+    copy(sha_sum[:], hash_decoded)
+    int_hash = sum_to_int(sha_sum)
+    commit_generated[int_hash] = true
+
+    // start generating commits
     for commit_number := 1; commit_number < (num_total_hashes); commit_number++ {
+        // generating commits
         salt := 0
         for commit_generated[int_hash] {
             salt++
-            shasum = gen_hash(parent_hash, strconv.Itoa(salt))
-            hash := make([]byte, 4)
-            copy(hash, shasum[:4])
-            hash[3] = hash[3] - (hash[3] % 16)
-            int_hash = binary.BigEndian.Uint32(hash) / 16
+            sha_sum = gen_hash(parent_hash, strconv.Itoa(salt))
+            int_hash = sum_to_int(sha_sum)
         }
         commit_generated[int_hash] = true
-        parent_hash = hex.EncodeToString(shasum[:])
+        parent_hash = hex.EncodeToString(sha_sum[:])
+
+        // progress tracking
         w.WriteString(parent_hash + " " + strconv.Itoa(salt) + "\n")
         progress += float64(num_total_hashes)/float64(num_total_hashes-commit_number)
         if commit_number > (num_total_hashes - 12000) {
