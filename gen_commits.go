@@ -71,7 +71,6 @@ func saltMine(parent string, commit_generated *[num_total_hashes]bool, salt_chan
             continue
         }
 
-
         // Tell the others or die trying!
         select {
         case result_chan <- CommitInfo{sha_sum, salt}:
@@ -84,11 +83,11 @@ func saltMine(parent string, commit_generated *[num_total_hashes]bool, salt_chan
 func get_next_commit(parent string, commit_generated *[num_total_hashes]bool, commit_number int) CommitInfo {
 
     var numWorkers int
-    if commit_number <= 250000000 {
+    if commit_number <= num_total_hashes/2 {
         numWorkers = 1
-    } else if commit_number <= 260000000 {
+    } else if commit_number <= num_total_hashes/4 {
         numWorkers = 2
-    } else if commit_number <= 2680000000 {
+    } else if commit_number <= num_total_hashes/8 {
         numWorkers = 4
     } else {
         numWorkers = 8
@@ -108,6 +107,7 @@ func get_next_commit(parent string, commit_generated *[num_total_hashes]bool, co
         case salt_chan <- salt:
             salt++
         case result := <-result_chan:
+            commit_generated[sum_to_int(result.sha_sum)] = true
             close(salt_chan)
             return result
         }
