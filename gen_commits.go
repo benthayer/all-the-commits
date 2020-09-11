@@ -45,7 +45,7 @@ func check(e error) {
     }
 }
 
-func sum_to_int (sha_sum [20]byte) {
+func sum_to_int (sha_sum [20]byte) uint32 {
     hash := make([]byte, 4)
     copy(hash, sha_sum[:4])
     hash[3] = hash[3] - (hash[3] % 16)
