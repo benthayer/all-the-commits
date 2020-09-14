@@ -1,1 +1,9 @@
 commits
+
+.DS_Store
+
+.git
+
+.gitignore
+
+/images
