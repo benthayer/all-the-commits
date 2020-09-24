@@ -16,8 +16,12 @@ var author = "author Ben Thayer <ben@benthayer.com> 1599715620 -0500"
 var committer = "committer Ben Thayer <ben@benthayer.com> 1599715620 -0500"
 var message = "Initial commit"
 
-func gen_hash(parent_hash string, salt string) [20]byte {
+// 1<<28 == 16^7
+const num_total_hashes = 1 << 28
+
+func gen_hash(parent_hash string, salt_int int) [20]byte {
 	parent := "parent " + parent_hash
+	salt := strconv.Itoa(salt_int)
 	commit := strings.Join(
 		[]string{
 			tree,
@@ -44,11 +48,66 @@ func check(e error) {
 	}
 }
 
-func sum_to_int(sha_sum [20]byte) {
+func sum_to_int(sha_sum [20]byte) uint32 {
 	hash := make([]byte, 4)
 	copy(hash, sha_sum[:4])
 	hash[3] = hash[3] - (hash[3] % 16)
 	return binary.BigEndian.Uint32(hash) / 16
+}
+
+type CommitInfo struct {
+	sha_sum [20]byte
+	salt    int
+}
+
+func saltMine(parent string, commit_generated *[num_total_hashes]bool, salt_chan chan int, result_chan chan CommitInfo) {
+	for salt := range salt_chan {
+		sha_sum := gen_hash(parent, salt)
+
+		// Try again if it's unique
+		if commit_generated[sum_to_int(sha_sum)] {
+			continue
+		}
+
+		// Tell the others or die trying!
+		select {
+		case result_chan <- CommitInfo{sha_sum, salt}:
+			return
+		}
+	}
+}
+
+func get_next_commit(parent string, commit_generated *[num_total_hashes]bool, commit_number int) CommitInfo {
+
+	var numWorkers int
+	if commit_number <= num_total_hashes/2 {
+		numWorkers = 1
+	} else if commit_number <= num_total_hashes/4 {
+		numWorkers = 2
+	} else if commit_number <= num_total_hashes/8 {
+		numWorkers = 4
+	} else {
+		numWorkers = 8
+	}
+
+	salt := 1
+	salt_chan := make(chan int)
+	result_chan := make(chan CommitInfo, numWorkers)
+
+	for i := 0; i < numWorkers; i++ {
+		go saltMine(parent, commit_generated, salt_chan, result_chan)
+	}
+
+	for {
+		select {
+		case salt_chan <- salt:
+			salt++
+		case result := <-result_chan:
+			commit_generated[sum_to_int(result.sha_sum)] = true
+			close(salt_chan)
+			return result
+		}
+	}
 }
 
 func main() {
@@ -57,9 +116,6 @@ func main() {
 	check(err)
 	defer f.Close()
 	w := bufio.NewWriter(f)
-
-	// 1<<28 == 16^7
-	const num_total_hashes = 1 << 28
 
 	// progress tracking
 	var expected float64 = 0
@@ -71,31 +127,23 @@ func main() {
 
 	// variables
 	var commit_generated [num_total_hashes]bool
-	var sha_sum [20]byte
-	var int_hash uint32
 
 	// set up first commit
 	parent_hash := "f9a17849fe28dff34647f698a392be2a9ce3617b"
-	hash_decoded, err := hex.DecodeString(parent_hash[:8])
+	hash_decoded, err := hex.DecodeString(parent_hash[:])
 	check(err)
+	var sha_sum [20]byte
 	copy(sha_sum[:], hash_decoded)
-	int_hash = sum_to_int(sha_sum)
-	commit_generated[int_hash] = true
+	commit_generated[sum_to_int(sha_sum)] = true
 
 	// start generating commits
 	for commit_number := 1; commit_number < (num_total_hashes); commit_number++ {
-		// generating commits
-		salt := 0
-		for commit_generated[int_hash] {
-			salt++
-			sha_sum = gen_hash(parent_hash, strconv.Itoa(salt))
-			int_hash = sum_to_int(sha_sum)
-		}
-		commit_generated[int_hash] = true
-		parent_hash = hex.EncodeToString(sha_sum[:])
+		commit_info := get_next_commit(parent_hash, &commit_generated, commit_number)
+
+		parent_hash = hex.EncodeToString(commit_info.sha_sum[:])
 
 		// progress tracking
-		w.WriteString(parent_hash + " " + strconv.Itoa(salt) + "\n")
+		w.WriteString(parent_hash + " " + strconv.Itoa(commit_info.salt) + "\n")
 		progress += float64(num_total_hashes) / float64(num_total_hashes-commit_number)
 		if commit_number > (num_total_hashes - 12000) {
 			w.Flush()
