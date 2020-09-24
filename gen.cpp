@@ -92,7 +92,7 @@ int main() {
 
     string parentHash = testParentHash;
     unsigned char* bithash;
-    bithash= new unsigned char[20] {201, 252, 61, 144, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    bithash = new unsigned char[20] {201, 252, 61, 144, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     cout << "Hash as index" << endl;
     cout << testParentHash << endl;
     cout << hexsha(bithash) << endl;
@@ -101,9 +101,10 @@ int main() {
     while (numCommits != TOTAL_NUM_HASHES) {
         int salt = 0;
         while (commitHasBeenGenerated[hashAsIndex(bithash)]) {
+            salt++;
+            delete[] bithash;
             bithash = genCommit(parentHash, salt);
             hash = hexsha(bithash);
-            salt++;
         }
         cout << parentHash << " " << to_string(salt) << endl;
         parentHash = hash;
