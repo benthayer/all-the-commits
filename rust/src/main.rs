@@ -1,11 +1,16 @@
 mod gen_commits;
-use gen_commits::check;
-use gen_commits::gen_hash;
-use gen_commits::sum_to_int;
+// use gen_commits::check;
+// use gen_commits::gen_hash;
+// use gen_commits::sum_to_int;
 
 fn main() {
     println!("Testing main.rs; success!");
 
+    // Track the commits we're making
+    unimplemented!
+    // all `check(err)` calls should be made with `panic
+    
+ 
     //     // Track the commits we're making
     //     f, err := os.Create("./commits")
     //     check(err)

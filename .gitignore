@@ -4,8 +4,6 @@ commits
 
 .git
 
-.gitignore
-
 .vscode
 
 rust/target
