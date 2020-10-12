@@ -37,26 +37,16 @@ pub fn check(error: ) {
 
 
 pub fn sum_to_int(sha_sum: Vec<u8>) -> u32 {
-  let mut dst = Vec::with_capacity(4);
-  dst.set_len(4);
-  copy(&sha_sum[0..4].as_mut_ptr(), dst.as_mut_ptr(), 4);
+  let mut dst = [0, 0, 0, 0];
+  // for reference, see the link below to understand why this works:
+  // https://stackoverflow.com/questions/28219231/how-to-idiomatically-copy-a-slice 
+  dst.clone_from_slice(&sha_sum[0..4]);
   
-  // @dev Need to initialize array then use math operations 
-  // on it (e.g. % and /)
-  //
-  // let arr = [0u8; 4];
-  // for (place, element) in arr.iter_mut().zip(dst.iter()) {
-  //   *place = *element;
-  // }
-  dst[3] = dst[3] - (dst[3] % 16); // ERROR cannot mod `*mut u8` by `{integer}`
+  dst[3] = dst[3] - (dst[3] % 16);
 
-  return BigEndian::read_u32(&dst.into_boxed_slice().try_into()) / 16;
-  // func sum_to_int (sha_sum [20]byte) {
-  //   hash := make([]byte, 4)
-  //   copy(hash, sha_sum[:4])
-  //   hash[3] = hash[3] - (hash[3] % 16)
-  //   return binary.BigEndian.Uint32(hash) / 16
-  // }
+  let int_to_return = BigEndian::read_u32(&dst) / 16;
+
+  return int_to_return;
 }
 
 
