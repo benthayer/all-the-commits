@@ -1,14 +1,41 @@
-use encoding;
-use std::ptr::copy;
-use std::convert::TryInto;
-use ring::{digest};
-use byteorder::{ByteOrder, BigEndian};
+use byteorder::{BigEndian, ByteOrder};
+// use crossbeam_channel as channel; this is used to illustrate how to send values
+// on a channel
+use ring::digest;
+
+/// Sending values on a channel
+/// 
+/// Create a non-buffered channel.
+/// let (tx, rx) = channel::unbounded();
+/// 
+/// Create a buffered channel with a capacity of one.
+/// let (s, r) = channel::bounded(1);
+/// 
+/// for i in 0..100 {
+///   // We can send an "infinite" amount of items into the unbounded channel
+///   // without blocking.
+///   // This is different from Go as we don't need a receiver ready.
+///   tx.send(i);
+/// }
+/// 
+/// // Try and receive one of the values in a blocking fashion.
+/// println!("{:?}", rx.recv());
+/// 
+/// s.send(1);
+/// // This would block until the receiving half read the value!
+/// s.send(2);
+///
+/// 
+///                              YOU LEFT OFF HERE 
+/// 
+/// Continue referring to this example of Channels in Rust
+/// https://gsquire.github.io/static/post/a-rusty-go-at-channels/#:~:text=Channels%20in%20Rust,can%20be%20shared%20across%20threads
 
 
+// 1<<28 == 16^7
+const NUM_TOTAL_HASHES: i64 = 1 << 28;
 
-const NUM_TOTAL_HASHES: i32 = 1 << 28;
-
-pub fn gen_hash(parent_hash: &str, salt_int: i32) -> Vec<u8> {
+pub fn gen_hash(parent_hash: &str, salt_int: i64) -> Vec<u8> {
   let tree = "tree 6a0165c2aea6cfc5fba01029ede7a8da6c85f6f6";
   let author = "author Ben Thayer <ben@benthayer.com> 1599715620 -0500";
   let committer = "committer Ben Thayer <ben@benthayer.com> 1599715620 -0500";
@@ -26,95 +53,30 @@ pub fn gen_hash(parent_hash: &str, salt_int: i32) -> Vec<u8> {
   return sha_sum.as_ref().to_vec();
 }
 
+/// Double check if this is needed.
+pub fn check() {}
 
-pub fn check(error: ) {
-  // func check(e error) {
-  //   if e != nil {
-  //       panic(e)
-  //   }
-  // }
-}
-
-
-pub fn sum_to_int(sha_sum: Vec<u8>) -> u32 {
+pub fn sum_to_int(sha_sum: Vec<u8>) -> u64 {
   let mut dst = [0, 0, 0, 0];
   // for reference, see the link below to understand why this works:
-  // https://stackoverflow.com/questions/28219231/how-to-idiomatically-copy-a-slice 
+  // https://stackoverflow.com/questions/28219231/how-to-idiomatically-copy-a-slice
   dst.clone_from_slice(&sha_sum[0..4]);
-  
   dst[3] = dst[3] - (dst[3] % 16);
 
-  let int_to_return = BigEndian::read_u32(&dst) / 16;
+  let int_to_return = BigEndian::read_u64(&dst) / 16;
 
   return int_to_return;
 }
 
-
 struct CommitInfo {
   sha_sum: Vec<u8>,
-  salt: i32
+  salt: i64,
 }
-// type CommitInfo struct {
-// 	sha_sum [20]byte
-// 	salt    int
-// }
 
-
-pub fn salt_mine() {
-  // for elem in iter {
-    
-  // }
+/// Channel inputs, `salt_chan` and `result_chan`
+pub fn salt_mine(parent: &str, commit_generated: &[bool], salt_chan: i64, result_chan: i64) {
+  // From examples in blog post, probs need something like this:  
+  tx.send(CommitInfo{sha_sum, salt});
 }
-// func saltMine(parent string, commit_generated *[num_total_hashes]bool, salt_chan chan int, result_chan chan CommitInfo) {
-  // 	for salt := range salt_chan {
-  // 		sha_sum := gen_hash(parent, salt)
 
-  // 		// Try again if it's unique
-  // 		if commit_generated[sum_to_int(sha_sum)] {
-  // 			continue
-  // 		}
-
-  // 		// Tell the others or die trying!
-  // 		select {
-  // 		case result_chan <- CommitInfo{sha_sum, salt}:
-  // 			return
-  // 		}
-  // 	}
-// }
-
-
-pub fn get_next_commit() {
-  unimplemented!
-}
-// func get_next_commit(parent string, commit_generated *[num_total_hashes]bool, commit_number int) CommitInfo {
-
-  // 	var numWorkers int
-  // 	if commit_number <= num_total_hashes/2 {
-  // 		numWorkers = 1
-  // 	} else if commit_number <= num_total_hashes/4 {
-  // 		numWorkers = 2
-  // 	} else if commit_number <= num_total_hashes/8 {
-  // 		numWorkers = 4
-  // 	} else {
-  // 		numWorkers = 8
-  // 	}
-
-  // 	salt := 1
-  // 	salt_chan := make(chan int)
-  // 	result_chan := make(chan CommitInfo, numWorkers)
-
-  // 	for i := 0; i < numWorkers; i++ {
-  // 		go saltMine(parent, commit_generated, salt_chan, result_chan)
-  // 	}
-
-  // 	for {
-  // 		select {
-  // 		case salt_chan <- salt:
-  // 			salt++
-  // 		case result := <-result_chan:
-  // 			commit_generated[sum_to_int(result.sha_sum)] = true
-  // 			close(salt_chan)
-  // 			return result
-  // 		}
-  // 	}
-// }
+pub fn get_next_commit() {}
