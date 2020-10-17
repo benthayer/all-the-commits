@@ -1,39 +1,9 @@
 use byteorder::{BigEndian, ByteOrder};
-// use crossbeam_channel as channel; this is used to illustrate how to send values
-// on a channel
+use crossbeam_channel as channel;
 use ring::digest;
 
-/// Sending values on a channel
-/// 
-/// Create a non-buffered channel.
-/// let (tx, rx) = channel::unbounded();
-/// 
-/// Create a buffered channel with a capacity of one.
-/// let (s, r) = channel::bounded(1);
-/// 
-/// for i in 0..100 {
-///   // We can send an "infinite" amount of items into the unbounded channel
-///   // without blocking.
-///   // This is different from Go as we don't need a receiver ready.
-///   tx.send(i);
-/// }
-/// 
-/// // Try and receive one of the values in a blocking fashion.
-/// println!("{:?}", rx.recv());
-/// 
-/// s.send(1);
-/// // This would block until the receiving half read the value!
-/// s.send(2);
-///
-/// 
-///                              YOU LEFT OFF HERE 
-/// 
-/// Continue referring to this example of Channels in Rust
-/// https://gsquire.github.io/static/post/a-rusty-go-at-channels/#:~:text=Channels%20in%20Rust,can%20be%20shared%20across%20threads
-
-
 // 1<<28 == 16^7
-const NUM_TOTAL_HASHES: i64 = 1 << 28;
+const NUM_TOTAL_HASHES: usize = (1 << 28) as usize;
 
 pub fn gen_hash(parent_hash: &str, salt_int: i64) -> Vec<u8> {
   let tree = "tree 6a0165c2aea6cfc5fba01029ede7a8da6c85f6f6";
@@ -74,9 +44,39 @@ struct CommitInfo {
 }
 
 /// Channel inputs, `salt_chan` and `result_chan`
-pub fn salt_mine(parent: &str, commit_generated: &[bool], salt_chan: i64, result_chan: i64) {
-  // From examples in blog post, probs need something like this:  
-  tx.send(CommitInfo{sha_sum, salt});
+pub fn salt_mine(
+  parent: &str,
+  commit_generated: [bool; NUM_TOTAL_HASHES],
+  salt_chan: channel::unbounded(),
+  result_chan: CommitInfo,
+) {
+  for salt in salt_chan {
+    /// Finish `get_next_commit` function first!
+  }
 }
 
-pub fn get_next_commit() {}
+pub fn get_next_commit(
+  parent: &str,
+  commit_generated: [bool; NUM_TOTAL_HASHES],
+  commit_number: i64,
+) -> CommitInfo {
+  let numWorkers: i64;
+
+  if commit_number <= (NUM_TOTAL_HASHES as i64) / 2 {
+    numWorkers = 1
+  } else if commit_number <= (NUM_TOTAL_HASHES as i64) / 4 {
+    numWorkers = 2
+  } else if commit_number <= (NUM_TOTAL_HASHES as i64) / 8 {
+    numWorkers = 4
+  } else {
+    numWorkers = 8
+  }
+
+  let salt = 1;
+  let (tx_salt_chan, rx_salt_chan) = channel::unbounded();
+  let (tx_result_chan, rx_result_chan) = channel::bounded(numWorkers);
+
+  // Left off on the two for loops
+
+  return result;
+}
