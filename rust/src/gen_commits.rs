@@ -1,5 +1,11 @@
-use byteorder::{BigEndian, ByteOrder};
+extern crate crossbeam_channel;
+extern crate threadpool;
+
+#[macro_use]
 use crossbeam_channel as channel;
+use threadpool::ThreadPool;
+
+use byteorder::{BigEndian, ByteOrder};
 use ring::digest;
 
 // 1<<28 == 16^7
@@ -28,6 +34,7 @@ pub fn check() {}
 
 pub fn sum_to_int(sha_sum: Vec<u8>) -> u64 {
   let mut dst = [0, 0, 0, 0];
+
   // for reference, see the link below to understand why this works:
   // https://stackoverflow.com/questions/28219231/how-to-idiomatically-copy-a-slice
   dst.clone_from_slice(&sha_sum[0..4]);
@@ -47,11 +54,26 @@ struct CommitInfo {
 pub fn salt_mine(
   parent: &str,
   commit_generated: [bool; NUM_TOTAL_HASHES],
-  salt_chan: channel::unbounded(),
-  result_chan: CommitInfo,
+  tx_salt_chan: channel::Sender<usize>,
+  rx_result_chan: channel::Receiver<usize>
 ) {
-  for salt in salt_chan {
-    /// Finish `get_next_commit` function first!
+  /// -------- BUG
+  for salt in tx_salt_chan {
+    let sha_sum = gen_hash(parent, salt);
+
+    // Try again if it's unique
+    /// -------- BUG
+    if commit_generated[sum_to_int(sha_sum)] {
+      continue;
+    }
+
+    // Tell the others, or die trying!
+    /// -------- BUG
+    select! {
+      /// need to test this to see if it works
+      tx_result_chan.send(CommitInfo{sha_sum, salt}),
+      recv(rx_result_chan, result) => return result,
+    }
   }
 }
 
@@ -63,20 +85,35 @@ pub fn get_next_commit(
   let numWorkers: i64;
 
   if commit_number <= (NUM_TOTAL_HASHES as i64) / 2 {
-    numWorkers = 1
+    numWorkers = 1;
   } else if commit_number <= (NUM_TOTAL_HASHES as i64) / 4 {
-    numWorkers = 2
+    numWorkers = 2;
   } else if commit_number <= (NUM_TOTAL_HASHES as i64) / 8 {
-    numWorkers = 4
+    numWorkers = 4;
   } else {
-    numWorkers = 8
+    numWorkers = 8;
   }
 
   let salt = 1;
   let (tx_salt_chan, rx_salt_chan) = channel::unbounded();
-  let (tx_result_chan, rx_result_chan) = channel::bounded(numWorkers);
+  let (tx_result_chan, rx_result_chan) = channel::bounded(numWorkers as usize);
 
   // Left off on the two for loops
+  /// -------- BUG (see if using `0..numWorkers` is sufficient)
+  for i in numWorkers {
+    /// -------- BUG
+    salt_mine(parent, commit_generated, tx_salt_chan, tx_result_chan);
+  }
 
-  return result;
+  /// -------- BUG
+  for {
+    select! {
+      tx_result_chan.send(result_chan),
+      
+      commit_generated[sum_to_int(result.sha_sum)] = true
+      drop(tx_salt_chan),
+      
+      recv(rx_result_chan) return result,
+    }
+  }
 }
