@@ -5,11 +5,12 @@ extern crate threadpool;
 use crossbeam_channel as channel;
 use threadpool::ThreadPool;
 
+use std::convert::TryFrom;
 use byteorder::{BigEndian, ByteOrder};
 use ring::digest;
 
 // 1<<28 == 16^7
-const NUM_TOTAL_HASHES: usize = (1 << 28) as usize;
+const NUM_TOTAL_HASHES: usize = 1 << 28;
 
 pub fn gen_hash(parent_hash: &str, salt_int: i64) -> Vec<u8> {
   let tree = "tree 6a0165c2aea6cfc5fba01029ede7a8da6c85f6f6";
@@ -32,15 +33,16 @@ pub fn gen_hash(parent_hash: &str, salt_int: i64) -> Vec<u8> {
 /// Double check if this is needed.
 pub fn check() {}
 
-pub fn sum_to_int(sha_sum: Vec<u8>) -> u64 {
-  let mut dst = [0, 0, 0, 0];
+pub fn sum_to_int(sha_sum: Vec<u8>) -> i64 {
+  let mut dst = [0; 4];
 
   // for reference, see the link below to understand why this works:
   // https://stackoverflow.com/questions/28219231/how-to-idiomatically-copy-a-slice
   dst.clone_from_slice(&sha_sum[0..4]);
   dst[3] = dst[3] - (dst[3] % 16);
 
-  let int_to_return = BigEndian::read_u64(&dst) / 16;
+  let int_u64 = BigEndian::read_u64(&dst) / 16;
+  let int_to_return: i64 = i64::try_from(int_u64);
 
   return int_to_return;
 }
@@ -50,19 +52,25 @@ struct CommitInfo {
   salt: i64,
 }
 
-/// Channel inputs, `salt_chan` and `result_chan`
 pub fn salt_mine(
   parent: &str,
   commit_generated: [bool; NUM_TOTAL_HASHES],
-  tx_salt_chan: channel::Sender<usize>,
+  rx_salt_chan: channel::Receiver<i64>,
   rx_result_chan: channel::Receiver<usize>
 ) {
-  /// -------- BUG
-  for salt in tx_salt_chan {
+  /// Confirm this works by running the program.
+  for salt in rx_salt_chan {
     let sha_sum = gen_hash(parent, salt);
 
     // Try again if it's unique
-    /// -------- BUG
+    /// Solution to this bug is either: 
+    ///   1) Change type of `NUM_TOTAL_HASHES` to i64 by using `try_from()` 
+    ///      function, or
+    ///   2) Change the return type of the `sum_to_int()` to an i64, also by
+    ///      using `try_from()` function (`as` keyword is UNSAFE!)
+    /// 
+    /// I was currently trying method 2 and am having trouble getting the
+    /// proper type to have as input into the `try_from()` function...
     if commit_generated[sum_to_int(sha_sum)] {
       continue;
     }
