@@ -89,6 +89,9 @@ pub fn get_next_commit(
     numWorkers = 8;
   }
 
+  // Create a new thread pool capable of executing four jobs concurrently.
+  let pool = ThreadPool::new(4);
+
   let salt = 1;
   let (s_salt_chan, r_salt_chan) = unbounded();
   let (s_result_chan, r_result_chan) = bounded(numWorkers as usize);
@@ -103,13 +106,22 @@ pub fn get_next_commit(
     );
   }
 
+  /// Implement thread pools...
+  /// Reference this!! -> https://docs.rs/crossbeam-channel/0.1.2/crossbeam_channel/struct.Select.html
+  for i in salt.. {
+    select! {
+      s_salt_chan.send(salt)
+      salt += 1
+    }
+  }
+
   /// Figure out how to have a loop so that `s_salt_chan` is not prematurely
   /// dropped during the chain of channel send and receive operations (and how
   /// to implement the increasing `salt` counter).
-  select! {
-    s_result_chan.send(result_chan),
-    commit_generated[sum_to_int(r_result_chan.sha_sum)] = true
-    drop(s_salt_chan),
-    recv(r_result_chan) return result,
-  }
+  // select! {
+  //   s_result_chan.send(result_chan),
+  //   commit_generated[sum_to_int(r_result_chan.sha_sum)] = true
+  //   drop(s_salt_chan),
+  //   recv(r_result_chan) return result,
+  // }
 }
