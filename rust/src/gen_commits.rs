@@ -103,6 +103,9 @@ pub fn get_next_commit(
     );
   }
 
+  /// Figure out how to have a loop so that `s_salt_chan` is not prematurely
+  /// dropped during the chain of channel send and receive operations (and how
+  /// to implement the increasing `salt` counter).
   select! {
     s_result_chan.send(result_chan),
     commit_generated[sum_to_int(r_result_chan.sha_sum)] = true
