@@ -1,4 +1,4 @@
-use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
+use crossbeam_channel::{bounded, unbounded, Select, select, Receiver, Sender};
 use threadpool::ThreadPool;
 
 use byteorder::{BigEndian, ByteOrder};
@@ -45,15 +45,14 @@ pub fn sum_to_int(sha_sum: Vec<u8>) -> u32 {
 
 struct CommitInfo {
   sha_sum: Vec<u8>,
-  salt: i64,
+  salt: i32,
 }
 
 pub fn salt_mine(
   parent: &str,
   commit_generated: [bool; NUM_TOTAL_HASHES_usize],
   r_salt_chan: Receiver<i32>,
-  r_result_chan: Receiver<usize>,
-  s_result_chan: Sender<usize>,
+  s_result_chan: Sender<CommitInfo>,
 ) {
   for salt in r_salt_chan {
     let sha_sum = gen_hash(parent, salt);
@@ -65,10 +64,7 @@ pub fn salt_mine(
 
     // Tell the others, or die trying!
     select! {
-      s_result_chan.send(CommitInfo{sha_sum, salt}),
-      /// Confirm that this method of returning result is correct by running
-      /// program.
-      recv(rx_result_chan, result) => return result,
+      s_result_chan.send(CommitInfo{sha_sum, salt})
     }
   }
 }
@@ -92,29 +88,28 @@ pub fn get_next_commit(
   // Create a new thread pool capable of executing four jobs concurrently.
   let pool = ThreadPool::new(4);
 
-  let salt = 1;
+  let salt: i32 = 1;
   let (s_salt_chan, r_salt_chan) = unbounded();
   let (s_result_chan, r_result_chan) = bounded(numWorkers as usize);
 
   for i in 0..numWorkers {
-    salt_mine(
-      parent,
-      commit_generated,
-      r_salt_chan,
-      r_result_chan,
-      s_result_chan,
-    );
+    salt_mine(parent, commit_generated, r_salt_chan, s_result_chan);
   }
 
+  /// Reference: https://docs.rs/crossbeam-channel/0.5.0/crossbeam_channel/struct.Select.html
+  let mut sel = Select::new();
+
   /// Implement thread pools...
-  /// Reference this!! -> https://docs.rs/crossbeam-channel/0.1.2/crossbeam_channel/struct.Select.html
   for i in salt.. {
     select! {
-      s_salt_chan.send(salt)
-      salt += 1
+      s_salt_chan.send(salt),
+      salt += 1,
+      // s_result_chan.send(r_result_chan),
+      // recv(r_result_chan, result) => return result,
     }
   }
 
+  return CommitInfo;
   /// Figure out how to have a loop so that `s_salt_chan` is not prematurely
   /// dropped during the chain of channel send and receive operations (and how
   /// to implement the increasing `salt` counter).
