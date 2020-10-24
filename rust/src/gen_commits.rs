@@ -1,4 +1,5 @@
-use crossbeam_channel::{bounded, unbounded, Select, select, Receiver, Sender};
+use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
+use futures::{executor::block_on, future, select as fut_select};
 use threadpool::ThreadPool;
 
 use byteorder::{BigEndian, ByteOrder};
@@ -51,10 +52,10 @@ struct CommitInfo {
 pub fn salt_mine(
   parent: &str,
   commit_generated: [bool; NUM_TOTAL_HASHES_usize],
-  r_salt_chan: Receiver<i32>,
-  s_result_chan: Sender<CommitInfo>,
+  salt_work_receiver: Receiver<i32>,
+  result_sender: Sender<CommitInfo>,
 ) {
-  for salt in r_salt_chan {
+  for salt in salt_work_receiver {
     let sha_sum = gen_hash(parent, salt);
     let index: usize = usize::try_from(sum_to_int(sha_sum)).unwrap();
 
@@ -64,7 +65,7 @@ pub fn salt_mine(
 
     // Tell the others, or die trying!
     select! {
-      s_result_chan.send(CommitInfo{sha_sum, salt})
+      return result_sender.send(CommitInfo{sha_sum, salt})
     }
   }
 }
@@ -89,34 +90,37 @@ pub fn get_next_commit(
   let pool = ThreadPool::new(4);
 
   let salt: i32 = 1;
-  let (s_salt_chan, r_salt_chan) = unbounded();
-  let (s_result_chan, r_result_chan) = bounded(numWorkers as usize);
+  let (salt_work_sender, salt_work_receiver) = unbounded();
+  let (result_sender, result_receiver) = bounded(numWorkers as usize);
 
-  for i in 0..numWorkers {
-    salt_mine(parent, commit_generated, r_salt_chan, s_result_chan);
-  }
+  let fut_salt_values = async {
+    let fut_salt_mine_result = async move {
+      for i in 0..numWorkers {
+        let result_sender = result_sender.clone();
 
-  /// Reference: https://docs.rs/crossbeam-channel/0.5.0/crossbeam_channel/struct.Select.html
-  let mut sel = Select::new();
+        pool.execute(move || {
+          salt_mine(parent, commit_generated, salt_work_receiver, result_sender);
+        });
+      }
+    };
 
-  /// Implement thread pools...
-  for i in salt.. {
-    select! {
-      s_salt_chan.send(salt),
-      salt += 1,
-      // s_result_chan.send(r_result_chan),
-      // recv(r_result_chan, result) => return result,
+    fut_salt_mine_result.await;
+  };
+
+  /// Select loop must operate concurrently with `salt_mine` so that
+  /// `result_receiver` is concurrently receiving input from the sending-channel
+  /// output of `saltMine()`.
+  select! {
+    fut_select!  {
+        salt_work_sender.send(salt),
+        salt += 1,
+        block_on(fut_salt_values), // `block_on()` always runs to completion
     }
+
+    commit_generated[sum_to_int(result_receiver.sha_sum)] = true,
+    close(salt_chan),
+    recv(result_receiver, result) => return result,
   }
 
-  return CommitInfo;
-  /// Figure out how to have a loop so that `s_salt_chan` is not prematurely
-  /// dropped during the chain of channel send and receive operations (and how
-  /// to implement the increasing `salt` counter).
-  // select! {
-  //   s_result_chan.send(result_chan),
-  //   commit_generated[sum_to_int(r_result_chan.sha_sum)] = true
-  //   drop(s_salt_chan),
-  //   recv(r_result_chan) return result,
-  // }
+  return CommitInfo; // here for sanity.
 }
