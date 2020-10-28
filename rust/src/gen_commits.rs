@@ -1,8 +1,8 @@
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
-use futures::{executor::block_on, future, select as fut_select};
 use threadpool::ThreadPool;
 // could perhaps switch to using tokio since it has thorough documentation.
 // use tokio; // first, go through tutorial -> https://tokio.rs/tokio/tutorial
+// use futures::{executor::block_on, future, select as fut_select};
 
 use byteorder::{BigEndian, ByteOrder};
 use ring::digest;
@@ -117,7 +117,7 @@ pub fn get_next_commit(
   select! {
     salt_work_sender.send(salt),
     salt += 1,
-    block_on(fut_salt_values), //
+    block_on(fut_salt_values), // runs asynchronously, waiting for new salt
 
     commit_generated[sum_to_int(result_receiver.sha_sum)] = true,
     close(salt_chan),
