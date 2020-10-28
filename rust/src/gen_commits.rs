@@ -1,6 +1,8 @@
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
 use futures::{executor::block_on, future, select as fut_select};
 use threadpool::ThreadPool;
+// could perhaps switch to using tokio since it has thorough documentation.
+// use tokio; // first, go through tutorial -> https://tokio.rs/tokio/tutorial
 
 use byteorder::{BigEndian, ByteOrder};
 use ring::digest;
@@ -28,7 +30,7 @@ pub fn gen_hash(parent_hash: &str, salt_int: i32) -> Vec<u8> {
   return sha_sum.as_ref().to_vec();
 }
 
-/// Double check if this is needed.
+/// Double check if this is needed; could maybe use `panic!` instead.
 pub fn check() {}
 
 pub fn sum_to_int(sha_sum: Vec<u8>) -> u32 {
@@ -76,6 +78,7 @@ pub fn get_next_commit(
   commit_number: i32,
 ) -> CommitInfo {
   let numWorkers: i32;
+
   if commit_number <= (NUM_TOTAL_HASHES_i32) / 2 {
     numWorkers = 1;
   } else if commit_number <= (NUM_TOTAL_HASHES_i32) / 4 {
@@ -104,23 +107,20 @@ pub fn get_next_commit(
       }
     };
 
+    // Wait until salt has been mined before mining another.
     fut_salt_mine_result.await;
   };
 
-  /// Select loop must operate concurrently with `salt_mine` so that
-  /// `result_receiver` is concurrently receiving input from the sending-channel
-  /// output of `saltMine()`.
+  // Select must operate concurrently with `salt_mine` so that `result_receiver`
+  // is concurrently receiving input from the sending-channel output of
+  // `saltMine()`.
   select! {
-    fut_select!  {
-        salt_work_sender.send(salt),
-        salt += 1,
-        block_on(fut_salt_values), // `block_on()` always runs to completion
-    }
+    salt_work_sender.send(salt),
+    salt += 1,
+    block_on(fut_salt_values), //
 
     commit_generated[sum_to_int(result_receiver.sha_sum)] = true,
     close(salt_chan),
     recv(result_receiver, result) => return result,
   }
-
-  return CommitInfo; // here for sanity.
 }
