@@ -30,11 +30,19 @@ pub fn gen_hash(parent_hash: &str, salt_int: i32) -> Vec<u8> {
   return sha_sum.as_ref().to_vec();
 }
 
-/// Double check if this is needed; could maybe use `panic!` instead.
-pub fn check() {}
+type Err<T> = std::result::Result<T, Error>;
+
+struct Error;
+
+// For unrecoverable errors
+pub fn check(error: Err<Error>) {
+  if error != None {
+    panic!(error);
+  }
+}
 
 pub fn sum_to_int(sha_sum: Vec<u8>) -> u32 {
-  let mut dst = [0; 4];
+  let mut dst = vec![0; 4];
 
   // for reference, see the link below to understand why this works:
   // https://stackoverflow.com/questions/28219231/how-to-idiomatically-copy-a-slice
