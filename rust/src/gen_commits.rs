@@ -34,12 +34,14 @@ type Err<T> = std::result::Result<T, Error>;
 
 struct Error;
 
-// For unrecoverable errors
-pub fn check(error: Err<Error>) {
-  if error != None {
-    panic!(error);
-  }
-}
+/// For unrecoverable errors -- perhaps need custom error types for each unique
+/// contextual error with this program. See the link below for more details:
+/// http://web.mit.edu/rust-lang_v1.25/arch/amd64_ubuntu1404/share/doc/rust/html/book/first-edition/error-handling.html
+// pub fn check(option: Option<T>) {
+//   if error != None {
+//     panic!(error);
+//   }
+// }
 
 pub fn sum_to_int(sha_sum: Vec<u8>) -> u32 {
   let mut dst = vec![0; 4];
