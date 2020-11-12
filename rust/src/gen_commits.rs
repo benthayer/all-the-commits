@@ -9,8 +9,8 @@ use ring::digest;
 use std::convert::TryFrom;
 
 // 1<<28 == 16^7
-const NUM_TOTAL_HASHES_usize: usize = 1 << 28;
-const NUM_TOTAL_HASHES_i32: i32 = 1 << 28;
+pub const NUM_TOTAL_HASHES_usize: usize = 1 << 28;
+pub const NUM_TOTAL_HASHES_i32: i32 = 1 << 28;
 
 pub fn gen_hash(parent_hash: &str, salt_int: i32) -> Vec<u8> {
   let tree = "tree 6a0165c2aea6cfc5fba01029ede7a8da6c85f6f6";
