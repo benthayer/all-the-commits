@@ -1,6 +1,8 @@
 mod gen_commits;
 
-use gen_commits::{gen_hash, NUM_TOTAL_HASHES_i32, NUM_TOTAL_HASHES_usize};
+use gen_commits::{
+  gen_hash, get_next_commit, sum_to_int, NUM_TOTAL_HASHES_i32, NUM_TOTAL_HASHES_usize,
+};
 use std::convert::TryFrom;
 use std::fs::File;
 use std::io::BufWriter;
@@ -14,7 +16,7 @@ fn main() {
 
   // Open a file in write-only mode, returns `io::Result<File>`
   let mut f = match File::create(&path) {
-    Err(why) => panic!("could'nt create {}: {}", display, why),
+    Err(why) => panic!("couldn't create {}: {}", display, why),
     Ok(f) => f,
   };
 
@@ -33,6 +35,27 @@ fn main() {
 
   // set up first commit
   let parent_hash: &str = "f9a17849fe28dff34647f698a392be2a9ce3617b";
-  /// TODO: slice parent hash and figure out if you are decoding string correctly.
-  let mut hash_decoded = match hex::decode(parent_hash..)
+
+  let mut hash_decoded = match hex::decode(&parent_hash) {
+    Err(why) => panic!("couldn't decode `parent_hash`: {}", why),
+    Ok(hash_decoded) => hash_decoded,
+  };
+
+  let sha_sum: Vec<u8>;
+  sha_sum.clone_from_slice(&hash_decoded);
+  commit_generated[usize::try_from(sum_to_int(sha_sum)).unwrap()] = true;
+
+  // start generating commits
+  for commit_number in 1..NUM_TOTAL_HASHES_i32 {
+    let commit_info = get_next_commit(parent_hash, commit_generated, commit_number);
+
+    let len_sha_sum = sha_sum.len();
+
+    /// TODO:  sha_sum elements are not known at compile time, fix this bug
+    let iterator = 0..len_sha_sum;
+    let sha = sha_sum[iterator];
+    let commit_info_to_encode = commit_info.sha_sum[0..len_sha_sum];
+
+    // parent_hash = &hex::encode();
+  }
 }

@@ -57,8 +57,8 @@ pub fn sum_to_int(sha_sum: Vec<u8>) -> u32 {
 }
 
 struct CommitInfo {
-  sha_sum: Vec<u8>,
-  salt: i32,
+  pub sha_sum: Vec<u8>,
+  pub salt: i32,
 }
 
 pub fn salt_mine(
