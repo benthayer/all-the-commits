@@ -56,7 +56,7 @@ pub fn sum_to_int(sha_sum: Vec<u8>) -> u32 {
   return int_to_return;
 }
 
-struct CommitInfo {
+pub struct CommitInfo {
   pub sha_sum: Vec<u8>,
   pub salt: i32,
 }

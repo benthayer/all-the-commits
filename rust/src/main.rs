@@ -3,6 +3,8 @@ mod gen_commits;
 use gen_commits::{
   gen_hash, get_next_commit, sum_to_int, NUM_TOTAL_HASHES_i32, NUM_TOTAL_HASHES_usize,
 };
+use std::io::Write;
+
 use std::convert::TryFrom;
 use std::fs::File;
 use std::io::BufWriter;
@@ -20,7 +22,7 @@ fn main() {
     Ok(f) => f,
   };
 
-  let mut w = BufWriter::new(f);
+  let mut buffer = BufWriter::new(f);
 
   // progress tracking
   let (mut expected, mut progress) = (0.0, 0.0);
@@ -49,13 +51,23 @@ fn main() {
   for commit_number in 1..NUM_TOTAL_HASHES_i32 {
     let commit_info = get_next_commit(parent_hash, commit_generated, commit_number);
 
-    let len_sha_sum = sha_sum.len();
+    let parent_hash = hex::encode(commit_info.sha_sum);
 
-    /// TODO:  sha_sum elements are not known at compile time, fix this bug
-    let iterator = 0..len_sha_sum;
-    let sha = sha_sum[iterator];
-    let commit_info_to_encode = commit_info.sha_sum[0..len_sha_sum];
+    // progress tracking
+    let to_write = parent_hash + " " + &commit_info.salt.to_string() + "\n";
+    buffer.write_all(&to_write.as_bytes());
 
-    // parent_hash = &hex::encode();
+    progress += f64::try_from(NUM_TOTAL_HASHES_i32).unwrap()
+      / f64::try_from(NUM_TOTAL_HASHES_i32 - commit_number).unwrap();
+    if commit_number > (NUM_TOTAL_HASHES_i32 - 12_000) {
+      buffer.flush();
+    }
+
+    let eta: f64 = progress / expected; // no exponent
+
+    println!(
+      "{:.8}",
+      format!("{}", eta) + "   " + &commit_number.to_string() + "\r"
+    );
   }
 }
