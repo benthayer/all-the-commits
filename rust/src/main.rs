@@ -1,8 +1,6 @@
 mod gen_commits;
 
-use gen_commits::{
-  gen_hash, get_next_commit, sum_to_int, NUM_TOTAL_HASHES_i32, NUM_TOTAL_HASHES_usize,
-};
+use gen_commits::{get_next_commit, sum_to_int, NUM_TOTAL_HASHES_i32, NUM_TOTAL_HASHES_usize};
 use std::io::Write;
 
 use std::convert::TryFrom;

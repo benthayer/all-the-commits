@@ -1,8 +1,11 @@
-use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
-use threadpool::ThreadPool;
-// could perhaps switch to using tokio since it has thorough documentation.
-// use tokio; // first, go through tutorial -> https://tokio.rs/tokio/tutorial
+/// Since use of `select!` macros are unstable, we MUST switch to using futures
+/// instead.
+// use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
+// ---------------------------
+use tokio; // go through tutorial -> https://tokio.rs/tokio/tutorial
+
 // use futures::{executor::block_on, future, select as fut_select};
+use threadpool::ThreadPool;
 
 use byteorder::{BigEndian, ByteOrder};
 use ring::digest;
@@ -76,9 +79,13 @@ pub fn salt_mine(
     }
 
     // Tell the others, or die trying!
-    select! {
-      return result_sender.send(CommitInfo{sha_sum, salt})
-    }
+    // `select!` macro is unstable.
+    // (see reference: https://stackoverflow.com/questions/52302371/what-is-the-equivalent-of-gos-select-case-paradigm-for-channels-in-rust)
+
+    // select! {
+    //   send(result_sender, CommitInfo { sha_sum, salt });
+    //   // recv(result_receiver, res) -> res => return res,
+    // }
   }
 }
 
@@ -103,9 +110,9 @@ pub fn get_next_commit(
   let pool = ThreadPool::new(4);
 
   let salt: i32 = 1;
-  let (salt_work_sender, salt_work_receiver) = unbounded();
-  let (result_sender, result_receiver) = bounded(numWorkers as usize);
-
+  /// Use `futures` instead.
+  // let (salt_work_sender, salt_work_receiver) = unbounded();
+  // let (result_sender, result_receiver) = bounded(numWorkers as usize);
   let fut_salt_values = async {
     let fut_salt_mine_result = async move {
       for i in 0..numWorkers {
@@ -121,16 +128,19 @@ pub fn get_next_commit(
     fut_salt_mine_result.await;
   };
 
+  // Use of `select!` macro is unstable.
+
   // Select must operate concurrently with `salt_mine` so that `result_receiver`
   // is concurrently receiving input from the sending-channel output of
   // `saltMine()`.
-  select! {
-    salt_work_sender.send(salt),
-    salt += 1,
-    block_on(fut_salt_values), // runs asynchronously, waiting for new salt
+  // select! {
+  //   /// Learn how to properly use the `select!` macro in channels
+  //   salt_work_sender.send(salt),
+  //   salt += 1,
+  //   block_on(fut_salt_values), // runs asynchronously, waiting for new salt
 
-    commit_generated[sum_to_int(result_receiver.sha_sum)] = true,
-    close(salt_chan),
-    recv(result_receiver, result) => return result,
-  }
+  //   commit_generated[sum_to_int(result_receiver.sha_sum)] = true,
+  //   close(salt_chan),
+  //   recv(result_receiver, result) => return result,
+  // }
 }
