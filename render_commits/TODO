@@ -1,0 +1,30 @@
+The code is present to:
+1: generate all commit hashes
+2: read pack files
+3: read idx files (linked with pack)
+
+Rough plan:
+1. Deploy commit generation code to a server & Generate all commits
+2. Using the commit salts and hashes, generate a large pack file
+3. Profit
+
+
+Process validation steps:
+- Write my own pack file + idx
+- Write my own large pack file + idx
+- Optimize / paralellize code to generate remainder of commits
+
+
+Finally, seems like we know what to do. Store the files in a large pack file. That's it. Write it in memory and then git can optimize it, or we can write code to optimize it oursevles. Size probably isn't a huge issue though.
+
+
+Rejected alternatives:
+- Multiple pack files
+- Compress using deltas
+- Store as loose objects w/ in-memory filesystem
+
+
+
+testing:
+Generate my own pack file with a single object. Then run git cat-file
+Switch the reference to be in the large offset table
