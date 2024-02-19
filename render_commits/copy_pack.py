@@ -5,18 +5,20 @@ import hashlib
 
 import config
 import decode_pack
+import decode_idx
 
 
 def write_header(pack_file, num_objects):
     signature = b'PACK'
     version = struct.pack('>I', 2)
     num_objects = struct.pack('>I', num_objects)
+    header = signature + version + num_objects
 
-    pack_file.write(signature)
-    pack_file.write(version)
-    pack_file.write(num_objects)
+    pack_file.write(header)
+    return header
 
-def write_object_header(pack_file, obj_type, obj_size):
+
+def get_object_header(obj_type, obj_size):
     if type(obj_type) != int:
         obj_type = config.type_codes[obj_type]
 
@@ -25,12 +27,16 @@ def write_object_header(pack_file, obj_type, obj_size):
 
     current_byte = type_mask | size_mask
     obj_size = obj_size >> 4
+
+    object_header = b''
     while obj_size:
         current_byte |= 1 << 7
-        pack_file.write(struct.pack('>B', current_byte))
+        object_header += struct.pack('>B', current_byte)
         current_byte = obj_size & 127
         obj_size = obj_size >> 7
-    pack_file.write(struct.pack('>B', current_byte))
+    object_header += struct.pack('>B', current_byte)
+
+    return object_header
 
 
 def write_sha1(pack_file):
@@ -39,25 +45,115 @@ def write_sha1(pack_file):
     written_data = pack_file.read()
     sha1.update(written_data)
     pack_file.write(sha1.digest())
+    return sha1.digest()
+
+
+def get_object_sha1(obj_type, obj_data):
+    sha1 = hashlib.sha1()
+    prefix = obj_type + ' ' + str(len(obj_data))
+    hash_string = prefix.encode() + b'\0' + obj_data
+    sha1.update(hash_string)
+    return sha1.digest()
 
 
 def write_pack_file(file_path, objects):
+    metadata = {}
     with open(file_path, 'wb+') as pack_file:
         write_header(pack_file, len(objects))
 
         for obj_type, obj_data in objects:
-            write_object_header(pack_file, obj_type, len(obj_data))
-            pack_file.write(zlib.compress(obj_data))
+            object_header = get_object_header(obj_type, len(obj_data))
+            compressed_data = zlib.compress(obj_data)
 
-        write_sha1(pack_file)
+            data_to_write = object_header + compressed_data
+            sha1 = get_object_sha1(obj_type, obj_data)
+            crc32 = struct.pack('>I', zlib.crc32(data_to_write))
+
+            metadata[sha1] = (crc32, pack_file.tell())
+
+            pack_file.write(data_to_write)
+
+        sha1 = write_sha1(pack_file)
+    return metadata, sha1
 
 
 def copy_pack(old_path, new_path):
     objects = decode_pack.parse_pack_file(old_path)
-    write_pack_file(new_path, objects)
+    return write_pack_file(new_path, objects)
+
+
+def create_index(idx_file_path, pack_metadata, pack_sha1):
+    # Prepare data
+    sorted_hashes = sorted(pack_metadata.keys())  # Sort hashes for fanout table and entries
+    num_objects = len(pack_metadata)
+
+    with open(idx_file_path, 'wb+') as idx_file:
+        # Write header
+        idx_file.write(b'\xfftOc')  # Magic number
+        idx_file.write(struct.pack('>I', 2))  # Version 2
+
+        # Write fanout table
+        fanout = [0] * 256
+        for hash in sorted_hashes:
+            fanout[hash[0]] += 1
+        for i in range(1, 256):
+            fanout[i] += fanout[i - 1]
+        for count in fanout:
+            idx_file.write(struct.pack('>I', count))
+
+        # Write hashes
+        for hash in sorted_hashes:
+            idx_file.write(hash)
+
+        # Write CRC32 checksums
+        for hash in sorted_hashes:
+            crc32 = pack_metadata[hash][0]
+            idx_file.write(crc32)
+
+        # Write 32-bit offsets
+        for hash in sorted_hashes:
+            offset = pack_metadata[hash][1]
+            if offset < 2**31:
+                idx_file.write(struct.pack('>I', offset))
+            else:
+                print('This should never happen!')
+                # Mark this as a large offset
+                idx_file.write(struct.pack('>I', 0x80000000 | len(large_offsets)))
+                large_offsets.append(offset)
+
+        # Write large offset table (if necessary)
+        # if 'large_offsets' in locals():
+        #     for offset in large_offsets:
+        #         idx_file.write(struct.pack('>Q', offset))
+
+        # Write packfile checksum (placeholder, replace with actual packfile hash)
+        idx_file.write(pack_sha1)
+
+        # Compute and write index file checksum
+        idx_file.seek(0)
+        index_content = idx_file.read()
+        index_sha1 = hashlib.sha1(index_content).digest()
+        idx_file.write(index_sha1)
+
+
+def write_idx_file():
+    """
+    header 8
+        magic 4 '\xfftOc'
+        version 4 '2'
+    fanout 256 * 4
+    hashes num * 20
+    chksum num * 4 => zlib.crc32()
+    offset num * 4
+    large offset table ?
+    packfile checksum => hashlib.sha1(packfile)
+    index checksum => hashlib.sha1(idxfile)
+    """
+    pass
+
 
 def compare_files(path1, path2):
-    with open(pack_file_path, 'rb') as f1, open(new_path, 'rb') as f2:
+    with open(path1, 'rb') as f1, open(path2, 'rb') as f2:
         c1 = f1.read()
         c2 = f2.read()
 
@@ -73,9 +169,10 @@ def compare_files(path1, path2):
         except:
             print(i)
             break
+
     # test 3: Lengths are equal
     assert len(c1) == len(c2)
-    print('they\'re the same...')
+    print('pack files match')
 
 
 if __name__ == '__main__':
@@ -87,9 +184,11 @@ if __name__ == '__main__':
     new_pack_path = 'data/new_pack.pack'
     new_idx_path = 'data/new_pack.idx'
 
-    copy_pack(pack_file_path, new_pack_path)
+    pack_metadata, pack_sha1 = copy_pack(pack_file_path, new_pack_path)
     compare_files(pack_file_path, new_pack_path)
+    print(pack_metadata)
 
-    create_index_from_pack(new_path, new_idx_path)
+    decode_idx.summarize_idx(idx_file_path)
+    create_index(new_idx_path, pack_metadata, pack_sha1)
     compare_files(idx_file_path, new_idx_path)
 

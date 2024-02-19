@@ -18,16 +18,16 @@ def read_idx_file(idx_file_path):
         # Read offsets
         offsets = [struct.unpack('>I', f.read(4))[0] for _ in range(num_objects)]
 
-        return sha1_hashes, offsets
+        return sha1_hashes, crc32_checksums, offsets
 
 
 def summarize_idx(idx_file_path):
-    sha1_hashes, offsets = read_idx_file(idx_file_path)
-    for sha1, offset in zip(sha1_hashes, offsets):
-        print(f"SHA-1: {sha1.hex()}, Offset: {offset}")
+    sha1_hashes, crc32_checksums, offsets = read_idx_file(idx_file_path)
+    for sha1, checksum, offset in zip(sha1_hashes, crc32_checksums, offsets):
+        print(f"SHA-1: {sha1.hex()}\tCRC32: {checksum}\tOffset: {offset}")
 
 
 if __name__ == '__main__':
     import config
-    idx_file_path = config.get_idx(config.get_pack_hash(0))
+    idx_file_path = config.get_idx(config.get_pack_hash(1))
     summarize_idx(idx_file_path)
