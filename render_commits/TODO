@@ -1,3 +1,17 @@
+TODOs
+- Replicate an existing pack file
+    - test for equality
+- Create function to create pack file based on list of objects
+
+2**32
+2**31
+need to write pack file first
+16**7
+2**4**7
+2**28
+
+
+
 The code is present to:
 1: generate all commit hashes
 2: read pack files

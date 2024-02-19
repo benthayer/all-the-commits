@@ -20,11 +20,14 @@ def read_idx_file(idx_file_path):
 
         return sha1_hashes, offsets
 
-# Example usage
-idx_file_path1 = '.git/objects/pack/pack-3df1506eca64b35ed8ff7def3b990ff6cdd968ae.idx'
-idx_file_path2 = '.git/objects/pack/pack-06aabca37f547a4e06a6166446a3087678999659.idx'
 
-sha1_hashes, offsets = read_idx_file(idx_file_path2)
-for sha1, offset in zip(sha1_hashes, offsets):
-    print(f"SHA-1: {sha1.hex()}, Offset: {offset}")
+def summarize_idx(idx_file_path):
+    sha1_hashes, offsets = read_idx_file(idx_file_path)
+    for sha1, offset in zip(sha1_hashes, offsets):
+        print(f"SHA-1: {sha1.hex()}, Offset: {offset}")
 
+
+if __name__ == '__main__':
+    import config
+    idx_file_path = config.get_idx(config.get_pack_hash(0))
+    summarize_idx(idx_file_path)
