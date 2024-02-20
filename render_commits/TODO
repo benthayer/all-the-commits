@@ -1,44 +1,11 @@
 TODOs
-- Replicate an existing pack file
-    - test for equality
-- Create function to create pack file based on list of objects
-
-2**32
-2**31
-need to write pack file first
-16**7
-2**4**7
-2**28
-
-
-
-The code is present to:
-1: generate all commit hashes
-2: read pack files
-3: read idx files (linked with pack)
+- Create list of objects from salt file
+- Connect and test commit generator
+- Run commit generator & Decide on next steps for project
+- Test by running git cat-file for any commit hash
 
 Rough plan:
 1. Deploy commit generation code to a server & Generate all commits
 2. Using the commit salts and hashes, generate a large pack file
 3. Profit
 
-
-Process validation steps:
-- Write my own pack file + idx
-- Write my own large pack file + idx
-- Optimize / paralellize code to generate remainder of commits
-
-
-Finally, seems like we know what to do. Store the files in a large pack file. That's it. Write it in memory and then git can optimize it, or we can write code to optimize it oursevles. Size probably isn't a huge issue though.
-
-
-Rejected alternatives:
-- Multiple pack files
-- Compress using deltas
-- Store as loose objects w/ in-memory filesystem
-
-
-
-testing:
-Generate my own pack file with a single object. Then run git cat-file
-Switch the reference to be in the large offset table
