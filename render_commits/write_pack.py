@@ -1,3 +1,5 @@
+import os
+
 import struct
 import zlib
 
@@ -56,8 +58,13 @@ def get_object_sha1(obj_type, obj_data):
     return sha1.digest()
 
 
-def write_pack_file(file_path, objects):
+def write_pack_file(output_dir, objects):
+    # Init metadata
     metadata = {}
+
+    # Create temporary name
+    file_path = os.path.join(output_dir, 'pack.pack.tmp')
+
     with open(file_path, 'wb+') as pack_file:
         write_header(pack_file, len(objects))
 
@@ -75,18 +82,22 @@ def write_pack_file(file_path, objects):
 
         sha1 = write_sha1(pack_file)
         print(f'Created pack file with sha1: {sha1.hex()}')
+
+    os.rename(file_path, os.path.join(output_dir, f'pack-{sha1}.pack'))
     return metadata, sha1
 
 
-def copy_pack(old_path, new_path):
+def copy_pack(old_path, output_dir):
     objects = decode_pack.parse_pack_file(old_path)
-    return write_pack_file(new_path, objects)
+    return write_pack_file(output_dir, objects)
 
 
-def create_index(idx_file_path, pack_metadata, pack_sha1):
+def create_index(output_dir, pack_metadata, pack_sha1):
     # Prepare data
     sorted_hashes = sorted(pack_metadata.keys())  # Sort hashes for fanout table and entries
     num_objects = len(pack_metadata)
+
+    idx_file_path = os.path.join(output_dir, f'pack-{pack_sha1}.idx')
 
     with open(idx_file_path, 'wb+') as idx_file:
         # Write header
@@ -139,9 +150,9 @@ def create_index(idx_file_path, pack_metadata, pack_sha1):
         idx_file.write(index_sha1)
 
 
-def create_pack_and_index(pack_path, index_path, objects):
-    pack_metadata, pack_sha1 = write_pack_file(pack_path, objects)
-    create_index(index_path, pack_metadata, pack_sha1)
+def create_pack_and_index(output_dir, objects):
+    pack_metadata, pack_sha1 = write_pack_file(output_dir, objects)
+    create_index(output_dir, pack_metadata, pack_sha1)
 
 
 def compare_files(path1, path2):
@@ -173,10 +184,11 @@ if __name__ == '__main__':
     pack_file_path = config.get_pack(config.get_pack_hash(0))
     idx_file_path = config.get_idx(config.get_pack_hash(0))
 
+    # TODO Get name from pack_sha1
     new_pack_path = 'data/new_pack.pack'
     new_idx_path = 'data/new_pack.idx'
 
-    pack_metadata, pack_sha1 = copy_pack(pack_file_path, new_pack_path)
+    pack_metadata, pack_sha1 = copy_pack(pack_file_path, 'data')
     compare_files(pack_file_path, new_pack_path)
     print(pack_metadata)
 

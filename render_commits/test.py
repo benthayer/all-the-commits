@@ -19,7 +19,7 @@ def test_custom_objects():
         ('blob', b'Hello!'),
         ('blob', b'Hello World!')
     ]
-    create_pack_and_index('data/pack.pack', 'data/pack.idx', objects)
+    create_pack_and_index('data', objects)
 
 def test_large_data():
     data = os.urandom(2**31 * 3)
@@ -29,7 +29,7 @@ def test_large_data():
 
 
 def test_large_pack():
-    create_pack_and_index('data/pack.pack', 'data/pack.idx', generate_objects())
+    create_pack_and_index('data', generate_objects())
 
 from decode_idx import summarize_idx
 import config
@@ -40,4 +40,4 @@ def test_new_idx():
 
 
 if __name__ == '__main__':
-    test_new_idx()
+    test_custom_objects()
