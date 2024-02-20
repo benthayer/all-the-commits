@@ -6,6 +6,7 @@ PACK_DIR = OBJ_DIR + 'pack/'
 packs = [
     '3df1506eca64b35ed8ff7def3b990ff6cdd968ae',
     '06aabca37f547a4e06a6166446a3087678999659',
+    'e8b1039bebee156209913bee73f80ddefeb6921b',
 ]
 
 def get_pack_hash(i):

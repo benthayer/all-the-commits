@@ -74,6 +74,7 @@ def write_pack_file(file_path, objects):
             pack_file.write(data_to_write)
 
         sha1 = write_sha1(pack_file)
+        print(f'Created pack file with sha1: {sha1.hex()}')
     return metadata, sha1
 
 
@@ -110,21 +111,23 @@ def create_index(idx_file_path, pack_metadata, pack_sha1):
             crc32 = pack_metadata[hash][0]
             idx_file.write(crc32)
 
+        # Init large offsets list
+        large_offsets = []
+
         # Write 32-bit offsets
         for hash in sorted_hashes:
             offset = pack_metadata[hash][1]
             if offset < 2**31:
                 idx_file.write(struct.pack('>I', offset))
             else:
-                print('This should never happen!')
                 # Mark this as a large offset
                 idx_file.write(struct.pack('>I', 0x80000000 | len(large_offsets)))
                 large_offsets.append(offset)
 
         # Write large offset table (if necessary)
-        # if 'large_offsets' in locals():
-        #     for offset in large_offsets:
-        #         idx_file.write(struct.pack('>Q', offset))
+        if large_offsets:
+            for offset in large_offsets:
+                idx_file.write(struct.pack('>Q', offset))
 
         # Write packfile checksum (placeholder, replace with actual packfile hash)
         idx_file.write(pack_sha1)
@@ -136,20 +139,9 @@ def create_index(idx_file_path, pack_metadata, pack_sha1):
         idx_file.write(index_sha1)
 
 
-def write_idx_file():
-    """
-    header 8
-        magic 4 '\xfftOc'
-        version 4 '2'
-    fanout 256 * 4
-    hashes num * 20
-    chksum num * 4 => zlib.crc32()
-    offset num * 4
-    large offset table ?
-    packfile checksum => hashlib.sha1(packfile)
-    index checksum => hashlib.sha1(idxfile)
-    """
-    pass
+def create_pack_and_index(pack_path, index_path, objects):
+    pack_metadata, pack_sha1 = write_pack_file(pack_path, objects)
+    create_index(index_path, pack_metadata, pack_sha1)
 
 
 def compare_files(path1, path2):
