@@ -9,11 +9,12 @@
 #include <mutex>
 #include <openssl/sha.h>
 
-#define TOTAL_NUM_HASHES 268435456
+#define TOTAL_NUM_HASHES 0x100000
+#define HASH_LENGTH_TO_GENERATE 5
 
 using namespace std;
 
-string hexsha(unsigned char* hash) {
+string hashToHexString(unsigned char* hash) {
     stringstream ss;
     for(int i=0; i<SHA_DIGEST_LENGTH; ++i)
         ss << setw(2) << setfill('0') << hex << (int)hash[i];
@@ -59,18 +60,19 @@ unsigned char* genCommit(string parentHash, int salt) {
 }
 
 
-unsigned int hashAsIndex(unsigned char* hash) {
-    unsigned int intHash = int(
-            hash[0] << 24 |
-            hash[1] << 16 |
-            hash[2] << 8 |
-            hash[3]
-            );
-    return intHash >> 4;
+unsigned int hashToInt(unsigned char* hash) {
+    unsigned int intHash = 0;
+    for (char i = 0; (i*2) < HASH_LENGTH_TO_GENERATE; i++) {
+        intHash = (intHash << 8) | hash[i];
+    }
+    if (HASH_LENGTH_TO_GENERATE % 2 == 1) {
+        intHash >>= 4;
+    }
+    return intHash;
 }
 
 struct Job {
-    string hash = "c9fc3d97717367b5fa45709a70a15ddd657f0275";
+    string parentHash = "";
     int salt = 0;
     bool active = true;
 };
@@ -82,8 +84,10 @@ class JobBoard {
     mutex m;
 
     public:
-    JobBoard() {
-        commitHasBeenGenerated[211796953] = true;
+    JobBoard(string initialCommitHash, unsigned int initialCommitIndex) {
+        commitHasBeenGenerated[initialCommitIndex] = true;
+
+        nextJob.parentHash = initialCommitHash;
         nextJob.active = true;
     }
 
@@ -94,45 +98,68 @@ class JobBoard {
         }
         Job job = nextJob;
         nextJob.salt++;
-        cout << job.hash << " " << to_string(job.salt) << " DISPATCH" << endl;
+        // cout << "JOB," << job.parentHash << "," << to_string(job.salt) << endl;
         m.unlock();
         return job;
     }
 
-    void submitResult(Job& job, unsigned char* bitHash, int tId) {
+    void submitResult(Job& job, unsigned char* bitHash, int threadID) {
         m.lock();
-        unsigned int hashIndex = hashAsIndex(bitHash);
+        unsigned int hashIndex = hashToInt(bitHash);
         if (!commitHasBeenGenerated[hashIndex]) {
-            // Save commit
-            cout << job.hash << " " << to_string(job.salt) << " " << hexsha(bitHash) << endl;
+            // Update progress
             commitHasBeenGenerated[hashIndex] = true;
             numCommits++;
 
+            // Save commit
+            string hexHash = hashToHexString(bitHash);
+            // cout << "SLN," << job.parentHash << "," << to_string(job.salt) << "," << hexHash << "," << numCommits<< endl;
             // Set up next commit
-            nextJob.hash = hexsha(bitHash);
+            nextJob.parentHash = hexHash;
             nextJob.salt = 1;
+            cout << "\r" << numCommits << flush;
         }
         delete[] bitHash;
         m.unlock();
     }
 };
 
-void work(JobBoard* jobBoard, int tId) {
+void work(JobBoard* jobBoard, int threadID) {
     Job job = jobBoard->getJob();
     do {
-        unsigned char* bitHash = genCommit(job.hash, job.salt);
-        jobBoard->submitResult(job, bitHash, tId);
+        unsigned char* bitHash = genCommit(job.parentHash, job.salt);
+        jobBoard->submitResult(job, bitHash, threadID);
         job = jobBoard->getJob();
     } while (job.active);
 }
 
 int main() {
-    JobBoard* jobBoard = new JobBoard();
-    thread t(work, jobBoard, 1);
-    thread t2(work, jobBoard, 2);
+    if (TOTAL_NUM_HASHES != (1 << (HASH_LENGTH_TO_GENERATE * 4))) {
+        cout << "Inputs incorreect" << endl;
+        return 1;
+    }
+    string initialCommitHash = "c9fc3d97717367b5fa45709a70a15ddd657f0275";
+    // unsigned int initialCommitIndex = 0xc9fc3d9;
+    unsigned int initialCommitIndex = 0xc9f;
 
-    t.join();
-    t2.join();
+    if (initialCommitIndex >= TOTAL_NUM_HASHES) {
+        cout << initialCommitIndex << endl;
+        cout << TOTAL_NUM_HASHES << endl;
+        cout << "initial Commit Index too big" << endl;
+        return 1;
+    }
+
+    JobBoard* jobBoard = new JobBoard(initialCommitHash, initialCommitIndex);
+
+    thread worker1(work, jobBoard, 1);
+    // thread worker2(work, jobBoard, 2);
+    // thread worker3(work, jobBoard, 3);
+    // thread worker4(work, jobBoard, 4);
+
+    worker1.join();
+    // worker2.join();
+    // worker3.join();
+    // worker4.join();
 
     return 0;
 }
