@@ -77,11 +77,26 @@ struct Job {
     bool active = true;
 };
 
+
 class JobBoard {
     bool commitHasBeenGenerated[TOTAL_NUM_HASHES]{};
     unsigned int numCommits = 1;
     Job nextJob;
+    thread workers[8];
+    int numWorkers = 0;
+    int maxWorkers = 8;
     mutex m;
+
+    void work() {
+        Job job = this->getJob();
+        do {
+            unsigned char* bitHash = genCommit(job.parentHash, job.salt);
+            if (this->checkResult(job, bitHash)) {
+                this->submitResult(job, bitHash);
+            }
+            job = this->getJob();
+        } while (job.active);
+    }
 
     public:
     JobBoard(string initialCommitHash, unsigned int initialCommitIndex) {
@@ -89,6 +104,20 @@ class JobBoard {
 
         nextJob.parentHash = initialCommitHash;
         nextJob.active = true;
+    }
+
+    void startWorker() {
+        if (numWorkers < maxWorkers) {
+            workers[numWorkers++] = thread(&JobBoard::work, this);
+        }
+    }
+
+    void joinWorkers() {
+        for (int i = 0; i < 8; i++) {
+            if (workers[i].joinable()) {
+                workers[i].join();
+            }
+        }
     }
 
     Job getJob(){
@@ -103,7 +132,12 @@ class JobBoard {
         return job;
     }
 
-    void submitResult(Job& job, unsigned char* bitHash, int threadID) {
+    bool checkResult(Job&job, unsigned char* bitHash) {
+        unsigned int hashIndex = hashToInt(bitHash);
+        return !commitHasBeenGenerated[hashIndex];
+    }
+
+    void submitResult(Job& job, unsigned char* bitHash) {
         m.lock();
         unsigned int hashIndex = hashToInt(bitHash);
         if (!commitHasBeenGenerated[hashIndex]) {
@@ -124,14 +158,6 @@ class JobBoard {
     }
 };
 
-void work(JobBoard* jobBoard, int threadID) {
-    Job job = jobBoard->getJob();
-    do {
-        unsigned char* bitHash = genCommit(job.parentHash, job.salt);
-        jobBoard->submitResult(job, bitHash, threadID);
-        job = jobBoard->getJob();
-    } while (job.active);
-}
 
 int main() {
     if (TOTAL_NUM_HASHES != (1 << (HASH_LENGTH_TO_GENERATE * 4))) {
@@ -151,15 +177,7 @@ int main() {
 
     JobBoard* jobBoard = new JobBoard(initialCommitHash, initialCommitIndex);
 
-    thread worker1(work, jobBoard, 1);
-    // thread worker2(work, jobBoard, 2);
-    // thread worker3(work, jobBoard, 3);
-    // thread worker4(work, jobBoard, 4);
-
-    worker1.join();
-    // worker2.join();
-    // worker3.join();
-    // worker4.join();
-
+    jobBoard->startWorker();
+    jobBoard->joinWorkers();
     return 0;
 }
