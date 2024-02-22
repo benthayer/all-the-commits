@@ -2,74 +2,16 @@
 #include <iostream>
 #include <sstream>
 #include <cstring>
-#include <iomanip>
 
-#include <vector>
 #include <thread>
 #include <mutex>
-#include <openssl/sha.h>
+
+#include "hashUtils.h"
 
 #define TOTAL_NUM_HASHES 0x100000
 #define HASH_LENGTH_TO_GENERATE 5
 
 using namespace std;
-
-string hashToHexString(unsigned char* hash) {
-    stringstream ss;
-    for(int i=0; i<SHA_DIGEST_LENGTH; ++i)
-        ss << setw(2) << setfill('0') << hex << (int)hash[i];
-    string hex_str = ss.str();
-    return hex_str;
-}
-
-
-unsigned char* hashObject(string strObject) {
-    unsigned char* hash = (unsigned char*)malloc(sizeof(char) * SHA_DIGEST_LENGTH); // == 20
-    unsigned char object[strObject.length()];
-    for (int i = 0; i < strObject.length(); i++) {
-        object[i] = (unsigned char)strObject[i];
-    }
-    SHA1(object, sizeof(object), hash);
-
-    return hash;
-
-}
-
-unsigned char* genCommit(string parentHash, int salt) {
-    string tree("tree f9baff06993b951e53c0312442241c6ee30921a6\n");
-    string content(
-        "author Ben Thayer <ben@benthayer.com> 1600063486 -0500\n"
-        "committer Ben Thayer <ben@benthayer.com> 1600063486 -0500\n"
-        "\n"
-        "Added gen_commits to .gitignore\n\n");
-
-    string parent("parent " + parentHash + "\n");
-
-    string commit;
-    commit.append(tree);
-    commit.append(parent);
-    commit.append(content);
-    commit.append(to_string(salt) + "\n");
-
-    string object("commit ");
-    object.append(to_string(commit.length()));
-    object.push_back('\0');
-    object.append(commit);
-
-    return hashObject(object);
-}
-
-
-unsigned int hashToInt(unsigned char* hash) {
-    unsigned int intHash = 0;
-    for (char i = 0; (i*2) < HASH_LENGTH_TO_GENERATE; i++) {
-        intHash = (intHash << 8) | hash[i];
-    }
-    if (HASH_LENGTH_TO_GENERATE % 2 == 1) {
-        intHash >>= 4;
-    }
-    return intHash;
-}
 
 struct Job {
     string parentHash = "";
@@ -133,13 +75,13 @@ class JobBoard {
     }
 
     bool checkResult(Job&job, unsigned char* bitHash) {
-        unsigned int hashIndex = hashToInt(bitHash);
+        unsigned int hashIndex = hashToInt(bitHash, HASH_LENGTH_TO_GENERATE);
         return !commitHasBeenGenerated[hashIndex];
     }
 
     void submitResult(Job& job, unsigned char* bitHash) {
         m.lock();
-        unsigned int hashIndex = hashToInt(bitHash);
+        unsigned int hashIndex = hashToInt(bitHash, HASH_LENGTH_TO_GENERATE);
         if (!commitHasBeenGenerated[hashIndex]) {
             // Update progress
             commitHasBeenGenerated[hashIndex] = true;
@@ -159,11 +101,12 @@ class JobBoard {
 };
 
 
-int main() {
+int generateCommits() {
     if (TOTAL_NUM_HASHES != (1 << (HASH_LENGTH_TO_GENERATE * 4))) {
         cout << "Inputs incorreect" << endl;
         return 1;
     }
+
     string initialCommitHash = "c9fc3d97717367b5fa45709a70a15ddd657f0275";
     // unsigned int initialCommitIndex = 0xc9fc3d9;
     unsigned int initialCommitIndex = 0xc9f;
@@ -180,4 +123,9 @@ int main() {
     jobBoard->startWorker();
     jobBoard->joinWorkers();
     return 0;
+}
+
+
+int main() {
+    return generateCommits();
 }
