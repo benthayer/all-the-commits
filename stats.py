@@ -10,7 +10,8 @@ def H(n):
     return gamma + log(n) + 0.5/n - 1./(12*n**2) + 1./(120*n**4)
 
 def progress(num_commits, n=16**7):
-    return n * (1 - H(n-num_commits)/H(n))
+    k = num_commits
+    return n * (H(n) - H(n-k-1))
 
 def total_tries(n=16**7):
     return n * H(n)
@@ -18,7 +19,7 @@ def total_tries(n=16**7):
 def precent_left(num_commits, n=16**7):
     return progress(num_commits, n) / total_tries(n)
 
-def total_tries():
+def total_tries1():
     # 16**7 = 268,435,456
     tries = 0
     for i in range(16**7):
@@ -56,3 +57,6 @@ def expected_first():
     expected_value /= stop_percent
 
     print(expected_value)  # 20534.965498815607 before 
+
+if __name__ == '__main__':
+    print(total_tries(16**7)/ 16**7)
