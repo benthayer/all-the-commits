@@ -9,6 +9,7 @@
 #include <atomic>
 #include <chrono>
 
+#include <sched.h>
 #include <boost/lockfree/spsc_queue.hpp>
 #include <openssl/rand.h>
 
@@ -27,7 +28,7 @@ void mine(int threadID, queue* myQueue, vector<queue*>* queues) {
   unsigned char* hash;
   unsigned int x;
   
-  unsigned int target = 250;
+  unsigned int target = 200;
 
   bool b;
 
@@ -51,13 +52,18 @@ void mine(int threadID, queue* myQueue, vector<queue*>* queues) {
   // cout << "Thread " << threadID << " stopped" << endl;
 }
 
+void setThreadPriority(pthread_t pthread_handle, int priority) {
+  struct sched_param param;
+  param.sched_priority = priority;
+  int result = pthread_setschedparam(pthread_handle, SCHED_FIFO, &param);
+}
+
 void setCoreAffinity(pthread_t pthread_handle, int core) {
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   CPU_SET(core, &cpuset);
   pthread_setaffinity_np(pthread_handle, sizeof(cpu_set_t), &cpuset);
 }
-
 
 void runThreads(int num_threads) {
   // cout << "Running with " << num_threads << " threads" << endl;
@@ -66,6 +72,8 @@ void runThreads(int num_threads) {
   vector<queue*> queues;
   vector<thread> threads;
 
+  int threadPriority = 99;
+
   // Start threads
   for (int i = 0; i < num_threads; ++i) {
     // queue myQueue(10);
@@ -73,6 +81,7 @@ void runThreads(int num_threads) {
     queues.push_back(q);
     threads.emplace_back(mine,i, queues[i], &queues);
     setCoreAffinity(threads.back().native_handle(), i % 8);
+    setThreadPriority(threads.back().native_handle(), threadPriority);
   }
 
   // Join threads
@@ -109,5 +118,3 @@ int main() {
   testMultiple(16);
   return 0;
 }
-
-
