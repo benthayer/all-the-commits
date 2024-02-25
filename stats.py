@@ -9,15 +9,15 @@ def H(n):
     gamma = 0.57721566490153286060651209008240243104215933593992
     return gamma + log(n) + 0.5/n - 1./(12*n**2) + 1./(120*n**4)
 
-def progress(num_commits, n=16**7):
+def tries_so_far(num_commits, n=16**7):
     k = num_commits
     return n * (H(n) - H(n-k-1))
 
 def total_tries(n=16**7):
     return n * H(n)
 
-def precent_left(num_commits, n=16**7):
-    return progress(num_commits, n) / total_tries(n)
+def progress(num_commits, n=16**7):
+    return tries_so_far(num_commits, n) / total_tries(n)
 
 def total_tries1():
     # 16**7 = 268,435,456
