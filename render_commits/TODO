@@ -1,0 +1,11 @@
+TODOs
+- Create list of objects from salt file
+- Connect and test commit generator
+- Run commit generator & Decide on next steps for project
+- Test by running git cat-file for any commit hash
+
+Rough plan:
+1. Deploy commit generation code to a server & Generate all commits
+2. Using the commit salts and hashes, generate a large pack file
+3. Profit
+

@@ -1,7 +1,6 @@
-commits
-
-.DS_Store
-
-.git
-
-.gitignore
+gen_commits
+gen
+gen-p
+out
+__pycache__
+render_commits/data

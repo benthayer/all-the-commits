@@ -1,0 +1,83 @@
+Three different approaches:
+1) Rounds where you solve one commit at a time
+2) Cycles where you dispatch the next job to each thread in order
+3) Dispatch to whichever thread is free
+
+Rounds:  // Start working only after all others in the round finish
+Dispatcher, Available, Locker
+
+HashInputs bestSolution;
+bool validSolutionFound;
+mutex solutionMutex;
+
+void submitSolution(solution) {
+    unique_lock<mutex> solutionLock(solutionMutex);
+    if (validSolution(solution)){
+        bestSolution = solution;
+        validSolutionFound = true;
+    }
+}
+
+void getNextJob() {
+    jobMutex = 
+}
+
+worker() {
+    // stuff
+}
+
+HashInputs, HashOutput round(hash) {
+    unique_lock<mutex> solutionLock(solutionMutex);
+    int salt = 1;
+    start-threads();
+    cv.wait(solutionLock, [] {return validSolutionFound;});
+    stop-threads();
+
+    return HashInputs(hash, salt);
+}
+
+void rounds() {
+    hash = 'ffff';
+    for (int i = 0; i < 16**7; i++) {
+        hashInputs, hash = round(hash);
+        cout << hashInputs << endl;
+    }
+}
+
+Cycler:  // Start working on next one right away
+Dispatcher, Job Array, Job Ready Array, Result Array, Result Ready Array
+
+4 arrays
+Jobs
+Job Ready
+Results
+Result Ready
+
+Master: Wait for result ready, Process result, Set job, Set job ready
+Slave: Wait for job, Process job, Set result, Set result ready
+
+Dispatch to Free:  // Start working on
+Dispatcher, Past List (Kept until all have returned)
+
+Job {
+    hash;
+    numJobsBegan;
+    numJobsCompleted; // Wait until numJobsBegan == numJobsCompleted or numJobsActive == 0;
+}
+
+Worker:
+Get Job
+    Increment number of active jobs for this hash
+    Prep next job (increment salt)
+Process Job
+Submit Job
+    Is the hash present in the result queue?
+        No -> Reject solution
+    Is this the best (or first) solution for this hash?
+    Yes -> Reset the best solution for the hash, Delete previous hashes from previous best solutions, Set next job to use newly found hash, Register the next hash so we can accept solutions for it
+    Decrement number of active jobs for this hash
+    Have all active jobs been completed for this hash?
+    Yes -> Remove hash from active jobs, Set next hash as active job
+
+    Update counter for hash
+    Are there any more jobs for this
