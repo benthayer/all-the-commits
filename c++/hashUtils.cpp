@@ -16,20 +16,29 @@ string hashToHexString(unsigned char* hash) {
     return hex_str;
 }
 
+#include <chrono>
 
-unsigned char* hashObject(string strObject) {
+
+unsigned char* hashObject(string& strObject) {
+    auto start = chrono::high_resolution_clock::now();
     unsigned char* hash = (unsigned char*)malloc(sizeof(char) * SHA_DIGEST_LENGTH); // == 20
     unsigned char object[strObject.length()];
     for (int i = 0; i < strObject.length(); i++) {
         object[i] = (unsigned char)strObject[i];
     }
+    auto end = chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    std::cout << "Time taken by function: " << duration.count() << " nanoseconds" << std::endl;
+    start = chrono::high_resolution_clock::now();
     SHA1(object, sizeof(object), hash);
-
+    end = chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    std::cout << "Time taken by function: " << duration.count() << " nanoseconds" << std::endl;
     return hash;
 
 }
 
-unsigned char* genCommit(string parentHash, int salt) {
+unsigned char* genCommit(string& parentHash, int salt) {
     string tree("tree f9baff06993b951e53c0312442241c6ee30921a6\n");
     string content(
         "author Ben Thayer <ben@benthayer.com> 1600063486 -0500\n"
