@@ -12,7 +12,7 @@ def run_linear(first_commit_hash, num_unique):
 
   with open('commits', 'w') as commit_file:
       while len(all_commits) != 16**num_unique:
-          salt = 0
+          salt = 1
           while commit_hash[:num_unique] in all_commits:
               salt += 1
               commit_hash = gen_hash(parent_hash, str(salt))
