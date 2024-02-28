@@ -4,3 +4,4 @@ gen-p
 out
 __pycache__
 render_commits/data
+**/commits
