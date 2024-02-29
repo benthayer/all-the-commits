@@ -25,28 +25,26 @@ unsigned char* hashObject(const string& strObject) {
     return hash;
 }
 
+
+
 unsigned char* genCommit(string& parentHash, int salt) {
-    string tree("tree f9baff06993b951e53c0312442241c6ee30921a6\n");
-    string content(
+    string object;
+    object.reserve(400);
+    object +=
+        "commit ###\0"
+        "tree f9baff06993b951e53c0312442241c6ee30921a6\n"
+        "parent "; object += parentHash; object += "\n"
         "author Ben Thayer <ben@benthayer.com> 1600063486 -0500\n"
         "committer Ben Thayer <ben@benthayer.com> 1600063486 -0500\n"
         "\n"
-        "Added gen_commits to .gitignore\n\n");
+        "Added gen_commits to .gitignore\n\n";
+    object += to_string(salt); object += "\n";
 
-    string parent("parent " + parentHash + "\n");
+    object.replace(7, 3, to_string(object.length() - 11));
 
-    string commit;
-    commit.append(tree);
-    commit.append(parent);
-    commit.append(content);
-    commit.append(to_string(salt) + "\n");
+    unsigned char* out = hashObject(object);
 
-    string object("commit ");
-    object.append(to_string(commit.length()));
-    object.push_back('\0');
-    object.append(commit);
-
-    return hashObject(object);
+    return out;
 }
 
 
