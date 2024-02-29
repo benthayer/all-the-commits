@@ -17,10 +17,10 @@ int main() {
     }
 
     auto end = high_resolution_clock::now();
-    auto duration = duration_cast<nanoseconds>(end - start);
+    auto duration = duration_cast<microseconds>(end - start);
 
     cout << "Time taken for " << num_trials << " trials of SHA-1 using OpenSSL: "
-         << duration.count() << " nanoseconds" << endl;
+         << duration.count() << " microseconds" << endl;
 
     return 0;
 }
