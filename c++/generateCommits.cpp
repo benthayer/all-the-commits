@@ -15,9 +15,6 @@ void generateCommits(string parentHash, unsigned int parentHashIndex, int length
     unsigned int numCommits = 1; // Parent hash is the first
     int salt = 0;
     while (numCommits != TOTAL_NUM_HASHES) {
-        if (numCommits == 100) {
-            exit(0);
-        }
         unsigned char* bithash = genCommit(parentHash, salt);
         string hash = hashToHexString(bithash);
         unsigned int hashIndex = hashToInt(bithash, length);

@@ -4,38 +4,25 @@
 #include <cstring>
 #include <iomanip>
 
-#include <openssl/sha.h>
+#include <cryptopp/sha.h>
 
 using namespace std;
+using namespace CryptoPP;
+
 
 string hashToHexString(unsigned char* hash) {
     stringstream ss;
-    for(int i=0; i<SHA_DIGEST_LENGTH; ++i)
+    for(int i=0; i<SHA1::DIGESTSIZE; ++i)
         ss << setw(2) << setfill('0') << hex << (int)hash[i];
     string hex_str = ss.str();
     return hex_str;
 }
 
-#include <chrono>
 
-
-unsigned char* hashObject(string& strObject) {
-    auto start = chrono::high_resolution_clock::now();
-    unsigned char* hash = (unsigned char*)malloc(sizeof(char) * SHA_DIGEST_LENGTH); // == 20
-    unsigned char object[strObject.length()];
-    for (int i = 0; i < strObject.length(); i++) {
-        object[i] = (unsigned char)strObject[i];
-    }
-    auto end = chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
-    std::cout << "Time taken by function: " << duration.count() << " nanoseconds" << std::endl;
-    start = chrono::high_resolution_clock::now();
-    SHA1(object, sizeof(object), hash);
-    end = chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
-    std::cout << "Time taken by function: " << duration.count() << " nanoseconds" << std::endl;
+unsigned char* hashObject(const string& strObject) {
+    unsigned char* hash = new unsigned char[SHA1::DIGESTSIZE];
+    SHA1().CalculateDigest(hash, reinterpret_cast<const byte*>(strObject.data()), strObject.size());
     return hash;
-
 }
 
 unsigned char* genCommit(string& parentHash, int salt) {
