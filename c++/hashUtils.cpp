@@ -25,8 +25,6 @@ unsigned char* hashObject(const string& strObject) {
     return hash;
 }
 
-
-
 unsigned char* genCommit(string& parentHash, int salt) {
     string object;
     object.reserve(400);
@@ -40,6 +38,7 @@ unsigned char* genCommit(string& parentHash, int salt) {
         "Added gen_commits to .gitignore\n\n";
     object += to_string(salt); object += "\n";
 
+    // Set the length minus the header
     object.replace(7, 3, to_string(object.length() - 11));
 
     unsigned char* out = hashObject(object);

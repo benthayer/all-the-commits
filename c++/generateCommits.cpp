@@ -1,10 +1,19 @@
 // Compile with g++ singleThread.cpp hashUtils.cpp -o run -lssl -lcrypto
 #include <cstring>
 #include <iostream>
+#include <iomanip>
 
 #include "hashUtils.h"
 
 using namespace std;
+
+#include <chrono>
+
+#include <cryptopp/sha.h>
+#include <cryptopp/hex.h>
+#include <cryptopp/filters.h>
+using namespace CryptoPP;
+using namespace chrono;
 
 void generateCommits(string parentHash, unsigned int parentHashIndex, int length) {
     unsigned int TOTAL_NUM_HASHES = 1 << (length * 4);
@@ -16,8 +25,10 @@ void generateCommits(string parentHash, unsigned int parentHashIndex, int length
     int salt = 0;
     while (numCommits != TOTAL_NUM_HASHES) {
         unsigned char* bithash = genCommit(parentHash, salt);
+
         string hash = hashToHexString(bithash);
         unsigned int hashIndex = hashToInt(bithash, length);
+
         if (!generated[hashIndex]) {
             // Log update
             generated[hashIndex] = true;
@@ -42,8 +53,8 @@ void generateCommits(string parentHash, unsigned int parentHashIndex, int length
 int main() {
     string startingHash = "c9fc3d97717367b5fa45709a70a15ddd657f0275";
     // unsigned int hashIndex = 0xc9fc3d9;
-    unsigned int hashIndex = 0xc9fc3;
-    generateCommits(startingHash, hashIndex, 5);
+    unsigned int hashIndex = 0xc9f;
+    generateCommits(startingHash, hashIndex, 3);
 
     return 0;
 }
