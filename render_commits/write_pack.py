@@ -83,7 +83,7 @@ def write_pack_file(output_dir, objects):
         sha1 = write_sha1(pack_file)
         print(f'Created pack file with sha1: {sha1.hex()}')
 
-    os.rename(file_path, os.path.join(output_dir, f'pack-{sha1}.pack'))
+    os.rename(file_path, os.path.join(output_dir, f'pack-{sha1.hex()}.pack'))
     return metadata, sha1
 
 
@@ -97,7 +97,7 @@ def create_index(output_dir, pack_metadata, pack_sha1):
     sorted_hashes = sorted(pack_metadata.keys())  # Sort hashes for fanout table and entries
     num_objects = len(pack_metadata)
 
-    idx_file_path = os.path.join(output_dir, f'pack-{pack_sha1}.idx')
+    idx_file_path = os.path.join(output_dir, f'pack-{pack_sha1.hex()}.idx')
 
     with open(idx_file_path, 'wb+') as idx_file:
         # Write header

@@ -54,6 +54,10 @@ def parse_pack_file(pack_file_path):
             obj_type, size = read_object_header(pack_file)
             print(f"\nObject {i+1}: Type {obj_type}, Size {size}")
 
+            if obj_type in [6, 7, 0]:
+                print("Unknown or unsupported object type")
+                continue
+
             decompressor = zlib.decompressobj()
             decompressed_data = b''
             while not decompressor.eof:
@@ -67,14 +71,15 @@ def parse_pack_file(pack_file_path):
                 print("Decompressed tree object data:", decompressed_data)
             elif obj_type == 3:  # Blob
                 print("Decompressed blob object data:", decompressed_data)
-            else:
-                print("Unknown or unsupported object type")
+            elif obj_type == 4:  # Tag
+                print("Decompressed tag object data:", decompressed_data)
         print(binascii.hexlify(pack_file.read()))
     return objects
 
 
 if __name__ == '__main__':
     import config
-    pack_file_path = config.get_pack(config.get_pack_hash(1))
-    objects = parse_pack_file(pack_file_path)
+    pack_file_path = config.get_pack(config.get_pack_hash(2))
+    # objects = parse_pack_file(pack_file_path)
+    objects = parse_pack_file('.git/objects/pack/pack-988d40c6b1a43ce769cd5ab2065d162683579592.pack')
     print(objects)

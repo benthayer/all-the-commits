@@ -38,6 +38,17 @@ def test_new_idx():
     idx_path = '../.git/objects/pack/pack-74909342a2e77e20efe61901d9e9eeb3d37c916d.idx'
     summarize_idx(idx_path)
 
+example_tag = b'tree 496d6428b9cf92981dc9495211e6e1120fb6f2ba\nauthor Ben Thayer <ben@benthayer.com> 1710803887 -0600\ncommitter Ben Thayer <ben@benthayer.com> 1710803887 -0600\n\na\n'
+# 2b42af579bc1f11eb139801b9a7d14ec59ce1f3e
+
+def test_pack_tag():
+    # Warning: This is for annotated tags only.
+    # You still need /refs/tags/tagname to reference the commit or annotated tag hash
+    objects = [
+        ('tag', example_tag)
+    ]
+    create_pack_and_index('data', objects)
+
 
 if __name__ == '__main__':
-    test_custom_objects()
+    test_pack_tag()

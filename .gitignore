@@ -5,4 +5,5 @@ out
 __pycache__
 render_commits/data
 **/commits
+**/output.*
 **/run
