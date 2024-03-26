@@ -1,0 +1,35 @@
+Next steps:
+1) Configure sequential code to write to disk
+2) Configure python code to read from disk
+
+Update 1:
+1) Update python to read commits from binary
+2) Sync python commit info w/ c++
+3) Test end to end
+
+Update 2:
+1) Convert python to c++
+2) Convert c++ gen to parallel
+3) Convert c++ ren to parallel
+
+
+Update 3:
+1) Optimize data structures
+    - Re-use strings
+    - Sequential data structures
+
+
+Deployment
+- Generate GitHub deploy token
+- Set AWS budget protections
+- Test mine.cpp
+- Pick optimal thread count
+
+
+Default:
+- Blank repo
+- Most committed file in history > file.txt
+- The odds of generating this commit were x/x
+- Generated commimt
+
+

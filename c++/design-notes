@@ -1,0 +1,33 @@
+What should the final version be?
+- Commit time is right now
+- Author: Ben
+- Commit message: Generated commit
+- Files: Readme.md
+    - Explain the repo
+
+Running
+1) Python to generate repo
+    - Git init
+    - Copy local readme
+    - Hash readme
+    - Hash tree
+    - Create initial commit
+2) Run c++ in local repo
+    - Automatically get HEAD
+    - Create pack files in .git/objects/pack
+    - Reset master to asdf
+
+
+Script commands
+- python init_repo --location dir/myrepo --readme=foo --time=bar
+- ./generate --location dir/myrepo --time=bar
+
+Deploy:
+- create PAT
+- git clone && cd && ./run
+    - python init_repo
+    - compile
+    - generate
+    - zip repo_name
+    - s3 upload repo_name.zip
+

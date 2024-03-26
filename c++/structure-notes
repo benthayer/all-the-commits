@@ -1,0 +1,70 @@
+Final structure:
+- Geneate w/ parallel c++ code
+- Sort hash / salt
+    - During generation?
+- Post-compute parallel
+    - Write ppack to buffer
+    - Write crc32 to direct place in memory
+    - Write offset to direct place in memory
+- Append tree data
+    - Copy pack data directly to new pack file
+    - Update offset data
+    - Save index data to be merged later
+- Post-compute offsets
+    - Add previous offsets
+    - Create large offset table
+- Write index
+    - Specialized merge sort
+        - Write n blocks
+        - Write tree data
+        - Write n blocks
+        - ...
+
+
+
+Generation:
+- Use central loop to create ouput array of salt and hash
+    - 20 bytes hash
+    - 8 bytes salt
+- Write to buffer including parent & child, alternating
+    - 20 bytes hash
+    - 8 bytes salt
+    - format: initial, salt, hash, salt, hash, salt ,... hash
+- Write buffer to disk
+
+Compression
+- Read all output into memory
+- Split compression jobs between processes, run independently, join
+- Get entry (header + compresses(obj)), crc32, length from array
+    - 2 bytes object compressed size metadata
+    - 400 bytes (fixed)  header + compressed(object)
+    - 4 bytes crc32
+    - 2 bytes length (to be converted to offset)
+- Concatenate arrays from all processes
+- Compute offsets from lengths
+    - 8 bytes offset
+    - Large offset table
+        - 4 bytes offset
+        - 8 bytes large offset table
+- Write pack data to buffer
+    - dynamic bytes header
+    - dynamic bytes entry (header + compressed(object))
+- Add initial commit + tree data
+- Feed buffer to sha1
+- Add hash to buffer
+- Write
+
+Index
+- Use radix sort to build sorted arrays of hash, crc32, offset
+- Merge sort w/ initial commit + tree index data
+- Update fanout table with initial commit + tree
+- Write index
+    - 4 bytes Update fanout
+        - Update values for each hash from initial commit data
+    - 20 bytes sorted hashes
+    - 4 bytes sorted crc32
+    - 4 bytes sorted offsets
+    - 8 bytes large offsets
+- Packfile hash
+- Index file hash
+
