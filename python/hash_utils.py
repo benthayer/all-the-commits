@@ -27,5 +27,5 @@ def gen_commit_obj(parent, salt):
 
 def gen_hash(parent, salt):
     obj = gen_commit_obj(parent, salt)
-    sha = sha1(obj).hexdigest()
-    return sha
+    sha = sha1(obj)
+    return sha.digest(), sha.hexdigest()

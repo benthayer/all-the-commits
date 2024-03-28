@@ -7,7 +7,7 @@ import sys
 from hash_utils import gen_hash
 
 def wrap_gen_hash(parent, salt):
-  return salt, gen_hash(parent, str(salt))
+  return salt, gen_hash(parent, str(salt))[1]
 
 # Asynchronous wrapper to run the blocking function in a thread
 async def run_sha1_async(executor, parent, salt):
@@ -63,7 +63,7 @@ async def run_parallel(first_commit_hash, num_unique, all_commits=None, num_comm
 
   workerPoolSize = 10
   with concurrent.futures.ThreadPoolExecutor(max_workers=workerPoolSize) as executor, \
-       open('commits', write_mode) as commit_file:
+       open('output.txt', write_mode) as commit_file:
     while num_commits < 16**num_unique:
       salt, new_hash = await run_iteration(executor, workerPoolSize, all_commits, num_commits, num_unique, parent_hash)
 

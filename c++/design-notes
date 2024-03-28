@@ -23,11 +23,12 @@ Script commands
 - ./generate --location dir/myrepo --time=bar
 
 Deploy:
-- create PAT
+- create personal access token
 - git clone && cd && ./run
     - python init_repo
     - compile
     - generate
     - zip repo_name
     - s3 upload repo_name.zip
+
 
